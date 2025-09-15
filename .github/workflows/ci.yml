@@ -1,3 +1,10 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
   vuln-scan:
     runs-on: ubuntu-latest
     steps:
@@ -10,13 +17,6 @@
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
           trivy fs . || true
-name: CI
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
@@ -28,6 +28,7 @@ jobs:
           echo "Docs build complete."
       - name: Deploy docs to GitHub Pages
         run: echo "Deploy docs to GitHub Pages (add your publish step here)"
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
