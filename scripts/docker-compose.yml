@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  web:
+    build: ../apps/web
+    ports:
+      - "3000:3000"
+  backend:
+    build: ../apps/backend
+    ports:
+      - "4000:4000"
+  ai:
+    build: ../apps/ai
+    ports:
+      - "5000:5000"
+  contracts:
+    build: ../apps/contracts
+    ports:
+      - "8545:8545"
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexuspass
+      POSTGRES_DB: finai
+    ports:
+      - "5432:5432"
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"

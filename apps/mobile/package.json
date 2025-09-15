@@ -1,0 +1,23 @@
+{
+  "name": "finai-nexus-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "react-native start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@react-navigation/native": "latest",
+    "expo": "latest",
+    "react": "latest",
+    "react-native": "latest"
+  },
+  "devDependencies": {
+    "@babel/preset-react": "^7.27.1",
+    "@testing-library/react-native": "^13.3.3",
+    "jest-environment-jsdom": "^30.1.2",
+    "metro-react-native-babel-preset": "^0.77.0"
+  }
+}

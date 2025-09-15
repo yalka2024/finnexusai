@@ -1,0 +1,31 @@
+name: FinAI Nexus CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - name: Install dependencies (web)
+        run: cd apps/web && npm install
+      - name: Build web
+        run: cd apps/web && npm run build
+      - name: Install dependencies (backend)
+        run: cd apps/backend && npm install
+      - name: Test backend
+        run: cd apps/backend && npm test
+      - name: Build Docker images
+        run: docker-compose -f scripts/docker-compose.yml build
+      - name: Run tests
+        run: echo "Run Jest, Cypress, and smart contract tests here"
+      - name: Deploy to AWS
+        run: echo "Deploy to AWS/EKS/ECS here"

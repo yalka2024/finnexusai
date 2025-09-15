@@ -1,0 +1,95 @@
+  vuln-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Snyk scan (Node.js)
+        run: |
+          npm install -g snyk
+          snyk test || true
+      - name: Trivy scan (Docker)
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+          trivy fs . || true
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build docs
+        run: |
+          cd docs
+          # Example: build static docs (replace with Docusaurus/MkDocs as needed)
+          echo "Docs build complete."
+      - name: Deploy docs to GitHub Pages
+        run: echo "Deploy docs to GitHub Pages (add your publish step here)"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [web, backend, mobile, ai]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          cd apps/${{ matrix.module }}
+          if [ "${{ matrix.module }}" = "ai" ]; then pip install -r requirements.txt || true; fi
+          if [ -f package.json ]; then npm install; fi
+      - name: Security audit (npm)
+        if: matrix.module != 'ai'
+        run: |
+          cd apps/${{ matrix.module }}
+          if [ -f package.json ]; then npm audit --audit-level=moderate || true; fi
+      - name: Security audit (pip)
+        if: matrix.module == 'ai'
+        run: |
+          cd apps/ai
+          pip install pip-audit || true
+          pip-audit || true
+      - name: Run Jest tests
+        run: |
+          cd apps/${{ matrix.module }}
+          npx jest --config jest.config.js --coverage
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-${{ matrix.module }}
+          path: apps/${{ matrix.module }}/coverage
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript, python
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+  deploy:
+    needs: [test, docs, codeql]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy web (Vercel)
+        if: success() && github.ref == 'refs/heads/main'
+        run: echo "Deploy web to Vercel (add your Vercel CLI and token here)"
+      - name: Deploy backend (Heroku)
+        if: success() && github.ref == 'refs/heads/main'
+        run: echo "Deploy backend to Heroku (add your Heroku CLI and token here)"
+      - name: Build Docker image
+        run: docker build -t finnexusai:latest .
