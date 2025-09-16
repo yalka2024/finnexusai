@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "nodemon src/index.js",
-  "start": "node src/index.js",
-  "test": "jest"
+    "start": "node src/index.js",
+    "test": "jest"
   },
   "dependencies": {
     "apollo-server-express": "latest",
+    "dotenv": "^16.6.1",
     "express": "latest",
     "graphql": "latest",
     "jsonwebtoken": "^9.0.2",
