@@ -69,12 +69,21 @@ jobs:
           cd apps/${{ matrix.module }}
           npm install || true
       - name: Install Jest globally
+        if: matrix.module != 'ai'
         run: npm install -g jest
       - name: Run Jest tests
+        if: matrix.module != 'ai'
         run: |
           cd apps/${{ matrix.module }}
           npx jest --config jest.config.js --coverage
+      - name: Run Python tests
+        if: matrix.module == 'ai'
+        run: |
+          cd apps/ai
+          pip install -r requirements.txt
+          pytest || python3 -m unittest discover
       - name: Upload coverage reports
+        if: matrix.module != 'ai'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.module }}
