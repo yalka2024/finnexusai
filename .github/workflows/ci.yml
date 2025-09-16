@@ -68,8 +68,8 @@ jobs:
         run: |
           cd apps/${{ matrix.module }}
           npm install || true
-        - name: Install Jest globally
-          run: npm install -g jest
+      - name: Install Jest globally
+        run: npm install -g jest
       - name: Run Jest tests
         run: |
           cd apps/${{ matrix.module }}
