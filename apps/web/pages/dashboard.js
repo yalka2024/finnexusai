@@ -3,7 +3,9 @@ import { useAuth } from '../components/AuthProvider';
 import WalletConnect from '../components/WalletConnect';
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const auth = useAuth();
+  const user = auth?.user;
+  const logout = auth?.logout;
   if (!user) return <div className="text-center mt-20">Please log in.</div>;
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">

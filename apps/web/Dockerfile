@@ -5,11 +5,14 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY apps/web/package*.json ./
-RUN npm install --production
+COPY package*.json ./
+RUN npm install
 
 # Copy frontend source code
-COPY apps/web ./
+COPY . ./
+
+# Build the Next.js app
+RUN npm run build
 
 # Expose frontend port (adjust if needed)
 EXPOSE 3000

@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { useAuth } from '../components/AuthProvider';
 
 export default function Login() {
-  const { login } = useAuth();
+  const auth = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    login(username, password);
+    if (auth && auth.login) {
+      auth.login(username, password);
+    }
   };
 
   return (
