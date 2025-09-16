@@ -1,0 +1,3 @@
+# requirements.txt for FinAI Nexus AI module
+pytest
+# Add any other dependencies for your AI Python code below
