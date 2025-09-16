@@ -11,6 +11,7 @@
     "apollo-server-express": "latest",
     "dotenv": "^16.6.1",
     "express": "latest",
+    "express-rate-limit": "^8.1.0",
     "graphql": "latest",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "latest",
