@@ -64,7 +64,7 @@ jobs:
           cd apps/${{ matrix.module }}
           npx jest --config jest.config.js --coverage
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v3
+  uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.module }}
           path: apps/${{ matrix.module }}/coverage
