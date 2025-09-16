@@ -59,6 +59,10 @@ jobs:
           cd apps/ai
           pip install pip-audit || true
           pip-audit || true
+      - name: Install dependencies
+        run: |
+          cd apps/${{ matrix.module }}
+          npm install || true
       - name: Run Jest tests
         run: |
           cd apps/${{ matrix.module }}
