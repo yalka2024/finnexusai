@@ -1,29 +1,28 @@
+const express = require('express');
+require('dotenv').config();
+const app = express();
+const audit = require('./audit');
+const rateLimit = require('express-rate-limit');
+const rbac = require('./rbac');
 // Health check endpoint for monitoring
 app.get('/api/v1/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-const audit = require('./audit');
 // Audit logging middleware
 app.use(audit);
-const rateLimit = require('express-rate-limit');
-const rbac = require('./rbac');
 // Rate limiting middleware
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
-
 // Monitoring stub (replace with Prometheus/Grafana integration)
 app.use((req, res, next) => {
   // Example: log request method and path
   console.log(`[MONITOR] ${req.method} ${req.path}`);
   next();
 });
-require('dotenv').config();
-const express = require('express');
+
 const { ApolloServer } = require('apollo-server-express');
 const typeDefs = require('./schema');
 const resolvers = require('./resolvers');
 const { authMiddleware } = require('./middleware');
-
-const app = express();
 
 // Advanced analytics endpoint (public for test/demo)
 app.get('/api/v1/advanced-analytics', async (req, res) => {
