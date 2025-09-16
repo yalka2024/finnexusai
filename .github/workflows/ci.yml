@@ -112,5 +112,9 @@ jobs:
       - name: Deploy backend (Heroku)
         if: success() && github.ref == 'refs/heads/main'
         run: echo "Deploy backend to Heroku (add your Heroku CLI and token here)"
-      - name: Build Docker image
-        run: docker build -t finnexusai:latest .
+      - name: Build and start all services with Docker Compose
+        run: |
+          docker-compose up --build -d
+      - name: Stop all services after build
+        run: |
+          docker-compose down

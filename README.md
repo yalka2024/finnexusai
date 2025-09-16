@@ -64,6 +64,18 @@ FinAI Nexus is a next-generation financial platform integrating AI-powered advis
 - Cloud-agnostic (AWS preferred) with Dockerized microservices.
 - CI/CD pipeline via GitHub Actions.
 - Automated testing with Jest and Cypress for production readiness.
+-
+- **Docker Compose Usage:**
+  - To build and run the full stack locally, use:
+    ```sh
+    docker-compose up --build -d
+    ```
+  - This will build and start all services (backend, frontend, etc.) as defined in `docker-compose.yml`.
+  - To stop the stack, use:
+    ```sh
+    docker-compose down
+    ```
+  - **Note:** There is no root-level Dockerfile; each service has its own Dockerfile. Always use Docker Compose for orchestration.
 
 ## 🚀 **Futuristic Features (2025-2026 Roadmap)**
 
@@ -166,9 +178,12 @@ FinAI Nexus is a next-generation financial platform integrating AI-powered advis
 1. **Clone**: `git clone https://github.com/FinAINexus/platform.git`
 2. **Install**: `npm install`
 3. **Configure**: Set up `.env` with API keys (X, blockchain nodes, AWS).
-4. **Run Locally**: `npm run dev`
-5. **Deploy**: Use AWS/Kubernetes for production; integrate with MetaMask for DeFi.
-6. **Explore**: Demo mode available for prototyping; see `/docs` for onboarding, API specs, and deployment guides.
+4. **Run Locally (Full Stack)**: `docker-compose up --build -d`
+  - This will build and start all services using Docker Compose.
+  - Access the frontend and backend at the ports defined in `docker-compose.yml` (e.g., http://localhost:3000, http://localhost:5000).
+5. **Stop Services**: `docker-compose down`
+6. **Deploy**: Use AWS/Kubernetes for production; integrate with MetaMask for DeFi.
+7. **Explore**: Demo mode available for prototyping; see `/docs` for onboarding, API specs, and deployment guides.
 
 ## 🤝 **Community & Contributing**
 
