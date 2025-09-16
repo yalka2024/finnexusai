@@ -1,3 +1,8 @@
+# Explicit permissions for CodeQL and security scanning
+permissions:
+  actions: read
+  contents: read
+  security-events: write
 name: CI
 on:
   push:
@@ -63,6 +68,8 @@ jobs:
         run: |
           cd apps/${{ matrix.module }}
           npm install || true
+        - name: Install Jest globally
+          run: npm install -g jest
       - name: Run Jest tests
         run: |
           cd apps/${{ matrix.module }}
