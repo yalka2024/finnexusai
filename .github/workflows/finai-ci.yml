@@ -1,0 +1,45 @@
+name: FinNexusAI CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Setup PowerShell logging module
+      - name: Setup Logging Module
+        shell: pwsh
+        run: |
+          Import-Module "$PWD\modules\logging\logging.psm1" -Force
+          Initialize-Log
+          Write-Log -Message "GitHub Actions workflow started" -Level INFO
+
+      # Run your main tasks with logging
+      - name: Run tasks.ps1
+        shell: pwsh
+        run: |
+          try {
+            Import-Module "$PWD\modules\logging\logging.psm1" -Force
+            Initialize-Log
+            Write-Log -Message "Executing tasks.ps1 in CI pipeline" -Level INFO
+            ./tasks.ps1
+          } catch {
+            Write-Log -Message "CI pipeline failed: $_" -Level ERROR
+            exit 1
+          }
+
+      # Upload logs as workflow artifact
+      - name: Upload Logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: finai-logs
+          path: ${{ env.USERPROFILE }}\FinAI_Logs
