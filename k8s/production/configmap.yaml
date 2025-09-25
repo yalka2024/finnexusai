@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: finnexusai-production-config
+  namespace: finnexusai-production
+  labels:
+    app: finnexusai
+    environment: production
+data:
+  # Application Configuration
+  NODE_ENV: "production"
+  PORT: "3000"
+  API_VERSION: "v1"
+  
+  # Database Configuration
+  DATABASE_POOL_MIN: "10"
+  DATABASE_POOL_MAX: "50"
+  DATABASE_SSL: "true"
+  DATABASE_SSL_REJECT_UNAUTHORIZED: "true"
+  
+  # Redis Configuration
+  REDIS_CLUSTER_NODES: "redis://prod-redis-node1.finnexusai.com:6379,redis://prod-redis-node2.finnexusai.com:6379,redis://prod-redis-node3.finnexusai.com:6379"
+  
+  # JWT Configuration
+  JWT_EXPIRES_IN: "24h"
+  JWT_REFRESH_EXPIRES_IN: "7d"
+  
+  # External API Configuration
+  PLAID_ENVIRONMENT: "production"
+  
+  # Blockchain Configuration
+  BSC_PROVIDER_URL: "https://bsc-dataseed.binance.org/"
+  ARBITRUM_PROVIDER_URL: "https://arb1.arbitrum.io/rpc"
+  
+  # Performance Configuration
+  RATE_LIMIT_WINDOW_MS: "900000"
+  RATE_LIMIT_MAX_REQUESTS: "1000"
+  CACHE_TTL_SECONDS: "300"
+  CDN_ENABLED: "true"
+  
+  # HFT Configuration
+  HFT_ENABLED: "true"
+  HFT_CO_LOCATION_ENABLED: "true"
+  HFT_MAX_LATENCY_MS: "0.5"
+  HFT_RISK_LIMIT_USD: "100000"
+  
+  # Arbitrage Configuration
+  ARBITRAGE_ENABLED: "true"
+  ARBITRAGE_MIN_PROFIT_PERCENTAGE: "0.3"
+  ARBITRAGE_MAX_POSITION_SIZE_USD: "50000"
+  
+  # Options & Derivatives
+  DERIVATIVES_ENABLED: "true"
+  BLACK_SCHOLES_ENABLED: "true"
+  MONTE_CARLO_SIMULATIONS: "50000"
+  
+  # Futurist Sandbox
+  SANDBOX_ENABLED: "true"
+  QUANTUM_SIMULATOR_ENABLED: "true"
+  AI_MODELS_ENABLED: "true"
+  
+  # Load Balancing
+  LOAD_BALANCER_ENABLED: "true"
+  HEALTH_CHECK_INTERVAL: "30000"
+  HEALTH_CHECK_TIMEOUT: "5000"
+  
+  # Backup Configuration
+  BACKUP_ENABLED: "true"
+  BACKUP_INTERVAL_HOURS: "6"
+  BACKUP_RETENTION_DAYS: "30"
+  
+  # Logging Configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  LOG_FILE_MAX_SIZE: "100MB"
+  LOG_FILE_MAX_FILES: "10"
+  
+  # SSL/TLS Configuration
+  SSL_ENABLED: "true"
+  
+  # CDN Configuration
+  CDN_PROVIDER: "cloudflare"
+  CDN_CACHE_TTL: "3600"
+  CDN_EDGE_CACHE_TTL: "86400"
+  
+  # Auto-scaling Configuration
+  AUTO_SCALE_ENABLED: "true"
+  MIN_REPLICAS: "3"
+  MAX_REPLICAS: "50"
+  TARGET_CPU_UTILIZATION: "70"
+  TARGET_MEMORY_UTILIZATION: "80"
+  
+  # Compliance Configuration
+  SHARIA_COMPLIANCE_ENABLED: "true"
+  GDPR_COMPLIANCE_ENABLED: "true"
+  PCI_DSS_COMPLIANCE_ENABLED: "true"
+  SOC2_COMPLIANCE_ENABLED: "true"
+  
+  # Security Configuration
+  BCRYPT_ROUNDS: "12"
+  QUANTUM_RESISTANT_ENCRYPTION: "true"
+

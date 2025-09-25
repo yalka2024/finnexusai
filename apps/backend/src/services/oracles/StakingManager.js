@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Staking Manager
- * 
+ *
  * Manages $NEXUS token staking for oracle participation:
  * - Token staking and unstaking
  * - Reward distribution
@@ -20,12 +21,12 @@ export class StakingManager {
     this.rewardCalculator = new RewardCalculator();
     this.slashingManager = new SlashingManager();
     this.governance = new GovernanceManager();
-    
+
     this.stakingPools = new Map();
     this.stakingAccounts = new Map();
     this.rewardHistory = new Map();
     this.slashingHistory = new Map();
-    
+
     this.stakingConfig = {
       minStake: 10000, // $NEXUS tokens
       maxStake: 1000000, // $NEXUS tokens
@@ -59,16 +60,16 @@ export class StakingManager {
         createdAt: new Date(),
         config: config
       };
-      
+
       // Store account
       this.stakingAccounts.set(userId, stakingAccount);
-      
+
       // Initialize blockchain staking contract
       await this.blockchain.initializeStakingContract(userId, config);
-      
+
       return stakingAccount;
     } catch (error) {
-      console.error('Staking account initialization failed:', error);
+      logger.error('Staking account initialization failed:', error);
       throw new Error('Failed to initialize staking account');
     }
   }
@@ -85,29 +86,29 @@ export class StakingManager {
       if (!account) {
         throw new Error('Staking account not found');
       }
-      
+
       // Validate stake amount
       await this.validateStakeAmount(amount);
-      
+
       // Check user balance
       const userBalance = await this.getUserBalance(userId);
       if (userBalance < amount) {
         throw new Error('Insufficient balance');
       }
-      
+
       // Execute staking transaction
       const stakingTx = await this.blockchain.stakeTokens(userId, amount);
-      
+
       // Update account
       account.totalStaked += amount;
       account.availableBalance += amount;
-      
+
       // Update staking pool
       await this.updateStakingPool(userId, amount);
-      
+
       // Start reward calculation
       await this.startRewardCalculation(userId);
-      
+
       return {
         success: true,
         transactionHash: stakingTx.hash,
@@ -116,7 +117,7 @@ export class StakingManager {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Staking failed:', error);
+      logger.error('Staking failed:', error);
       throw new Error('Failed to stake tokens');
     }
   }
@@ -133,23 +134,23 @@ export class StakingManager {
       if (!account) {
         throw new Error('Staking account not found');
       }
-      
+
       // Validate unstake amount
       if (amount > account.availableBalance) {
         throw new Error('Insufficient staked balance');
       }
-      
+
       // Execute unstaking transaction
       const unstakingTx = await this.blockchain.unstakeTokens(userId, amount);
-      
+
       // Update account
       account.totalStaked -= amount;
       account.availableBalance -= amount;
       account.pendingUnstake += amount;
-      
+
       // Schedule unstaking completion
       await this.scheduleUnstakingCompletion(userId, amount);
-      
+
       return {
         success: true,
         transactionHash: unstakingTx.hash,
@@ -160,7 +161,7 @@ export class StakingManager {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Unstaking failed:', error);
+      logger.error('Unstaking failed:', error);
       throw new Error('Failed to unstake tokens');
     }
   }
@@ -176,24 +177,24 @@ export class StakingManager {
       if (!account) {
         throw new Error('Staking account not found');
       }
-      
+
       // Calculate rewards
       const rewards = await this.calculateRewards(userId);
-      
+
       if (rewards <= 0) {
         throw new Error('No rewards to claim');
       }
-      
+
       // Execute reward claim transaction
       const claimTx = await this.blockchain.claimRewards(userId, rewards);
-      
+
       // Update account
       account.totalRewards += rewards;
       account.lastRewardClaim = new Date();
-      
+
       // Record reward history
       await this.recordRewardHistory(userId, rewards);
-      
+
       return {
         success: true,
         transactionHash: claimTx.hash,
@@ -202,7 +203,7 @@ export class StakingManager {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Reward claim failed:', error);
+      logger.error('Reward claim failed:', error);
       throw new Error('Failed to claim rewards');
     }
   }
@@ -220,29 +221,29 @@ export class StakingManager {
       if (!account) {
         throw new Error('Staking account not found');
       }
-      
+
       // Validate slash amount
       const maxSlash = account.totalStaked * this.stakingConfig.slashingRate;
       const slashAmount = Math.min(amount, maxSlash);
-      
+
       // Execute slashing transaction
       const slashTx = await this.blockchain.slashTokens(userId, slashAmount);
-      
+
       // Update account
       account.totalStaked -= slashAmount;
       account.availableBalance -= slashAmount;
-      
+
       // Update staking pool
       await this.updateStakingPool(userId, -slashAmount);
-      
+
       // Record slashing history
       await this.recordSlashingHistory(userId, slashAmount, reason);
-      
+
       // Check if account should be deactivated
       if (account.totalStaked < this.stakingConfig.minStake) {
         await this.deactivateAccount(userId);
       }
-      
+
       return {
         success: true,
         transactionHash: slashTx.hash,
@@ -252,7 +253,7 @@ export class StakingManager {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Slashing failed:', error);
+      logger.error('Slashing failed:', error);
       throw new Error('Failed to slash tokens');
     }
   }
@@ -267,13 +268,13 @@ export class StakingManager {
     if (!account) {
       throw new Error('Staking account not found');
     }
-    
+
     // Calculate current rewards
     const currentRewards = await this.calculateRewards(userId);
-    
+
     // Get staking pool information
     const poolInfo = await this.getStakingPoolInfo();
-    
+
     return {
       userId: userId,
       totalStaked: account.totalStaked,
@@ -296,14 +297,14 @@ export class StakingManager {
   async getStakingPoolInfo() {
     const totalStaked = Array.from(this.stakingAccounts.values())
       .reduce((sum, account) => sum + account.totalStaked, 0);
-    
+
     const activeValidators = Array.from(this.stakingAccounts.values())
       .filter(account => account.isActive && account.totalStaked >= this.stakingConfig.minStake)
       .length;
-    
+
     const totalRewards = Array.from(this.stakingAccounts.values())
       .reduce((sum, account) => sum + account.totalRewards, 0);
-    
+
     return {
       totalStaked: totalStaked,
       activeValidators: activeValidators,
@@ -326,18 +327,18 @@ export class StakingManager {
     if (!account) {
       return 0;
     }
-    
+
     // Calculate time since last reward claim
     const timeSinceLastClaim = Date.now() - account.lastRewardClaim.getTime();
     const daysSinceLastClaim = timeSinceLastClaim / (1000 * 60 * 60 * 24);
-    
+
     // Calculate annual reward rate
     const annualRewardRate = this.stakingConfig.rewardRate;
     const dailyRewardRate = annualRewardRate / 365;
-    
+
     // Calculate rewards
     const rewards = account.totalStaked * dailyRewardRate * daysSinceLastClaim;
-    
+
     return Math.max(0, rewards);
   }
 
@@ -349,21 +350,21 @@ export class StakingManager {
     if (!account) {
       return;
     }
-    
+
     // Start periodic reward calculation
-    const rewardInterval = setInterval(async () => {
+    const rewardInterval = setInterval(async() => {
       try {
         const rewards = await this.calculateRewards(userId);
-        
+
         // Auto-claim rewards if they exceed a threshold
         if (rewards > 100) { // 100 $NEXUS tokens
           await this.claimRewards(userId);
         }
       } catch (error) {
-        console.error(`Reward calculation failed for user ${userId}:`, error);
+        logger.error(`Reward calculation failed for user ${userId}:`, error);
       }
     }, 3600000); // Every hour
-    
+
     // Store interval ID for cleanup
     account.rewardInterval = rewardInterval;
   }
@@ -373,12 +374,12 @@ export class StakingManager {
    */
   async scheduleUnstakingCompletion(userId, amount) {
     const completionTime = new Date(Date.now() + this.stakingConfig.unstakingPeriod * 24 * 60 * 60 * 1000);
-    
-    setTimeout(async () => {
+
+    setTimeout(async() => {
       try {
         await this.completeUnstaking(userId, amount);
       } catch (error) {
-        console.error(`Unstaking completion failed for user ${userId}:`, error);
+        logger.error(`Unstaking completion failed for user ${userId}:`, error);
       }
     }, this.stakingConfig.unstakingPeriod * 24 * 60 * 60 * 1000);
   }
@@ -391,14 +392,14 @@ export class StakingManager {
     if (!account) {
       return;
     }
-    
+
     // Execute unstaking completion transaction
     const completionTx = await this.blockchain.completeUnstaking(userId, amount);
-    
+
     // Update account
     account.pendingUnstake -= amount;
     account.availableBalance += amount;
-    
+
     return {
       success: true,
       transactionHash: completionTx.hash,
@@ -416,10 +417,10 @@ export class StakingManager {
       validators: new Set(),
       lastUpdate: new Date()
     };
-    
+
     pool.totalStaked += amount;
     pool.lastUpdate = new Date();
-    
+
     if (amount > 0) {
       pool.validators.add(userId);
     } else if (amount < 0) {
@@ -429,7 +430,7 @@ export class StakingManager {
         pool.validators.delete(userId);
       }
     }
-    
+
     this.stakingPools.set('main', pool);
   }
 
@@ -438,13 +439,13 @@ export class StakingManager {
    */
   async recordRewardHistory(userId, amount) {
     const history = this.rewardHistory.get(userId) || [];
-    
+
     history.push({
       amount: amount,
       timestamp: new Date(),
       type: 'reward_claim'
     });
-    
+
     this.rewardHistory.set(userId, history);
   }
 
@@ -453,14 +454,14 @@ export class StakingManager {
    */
   async recordSlashingHistory(userId, amount, reason) {
     const history = this.slashingHistory.get(userId) || [];
-    
+
     history.push({
       amount: amount,
       reason: reason,
       timestamp: new Date(),
       type: 'slashing'
     });
-    
+
     this.slashingHistory.set(userId, history);
   }
 
@@ -472,15 +473,15 @@ export class StakingManager {
     if (!account) {
       return;
     }
-    
+
     // Deactivate account
     account.isActive = false;
-    
+
     // Clear reward calculation interval
     if (account.rewardInterval) {
       clearInterval(account.rewardInterval);
     }
-    
+
     // Remove from staking pool
     const pool = this.stakingPools.get('main');
     if (pool) {
@@ -495,7 +496,7 @@ export class StakingManager {
     if (amount < this.stakingConfig.minStake) {
       throw new Error(`Minimum stake is ${this.stakingConfig.minStake} $NEXUS tokens`);
     }
-    
+
     if (amount > this.stakingConfig.maxStake) {
       throw new Error(`Maximum stake is ${this.stakingConfig.maxStake} $NEXUS tokens`);
     }
@@ -515,14 +516,14 @@ export class StakingManager {
    */
   async getStakingStatistics() {
     const accounts = Array.from(this.stakingAccounts.values());
-    
+
     const totalStaked = accounts.reduce((sum, account) => sum + account.totalStaked, 0);
     const activeAccounts = accounts.filter(account => account.isActive).length;
     const totalRewards = accounts.reduce((sum, account) => sum + account.totalRewards, 0);
-    
+
     const avgStake = activeAccounts > 0 ? totalStaked / activeAccounts : 0;
     const avgRewards = activeAccounts > 0 ? totalRewards / activeAccounts : 0;
-    
+
     return {
       totalStaked: totalStaked,
       activeAccounts: activeAccounts,

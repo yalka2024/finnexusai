@@ -2,7 +2,7 @@ const request = require('supertest');
 const app = require('../src/index');
 
 describe('Advanced Analytics API', () => {
-  it('should return forecasts, volatility, and risk scores', async () => {
+  it('should return forecasts, volatility, and risk scores', async() => {
     const res = await request(app).get('/api/v1/advanced-analytics');
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('forecasts');
@@ -12,7 +12,7 @@ describe('Advanced Analytics API', () => {
 });
 
 describe('Leaderboard API', () => {
-  it('should return leaderboard data', async () => {
+  it('should return leaderboard data', async() => {
     const res = await request(app).get('/api/v1/leaderboard');
     expect(res.statusCode).toBe(200);
     expect(res.body.leaderboard.length).toBeGreaterThan(0);

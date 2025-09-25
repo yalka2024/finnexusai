@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 jest.mock('../components/AuthProvider', () => ({
   useAuth: () => ({ login: jest.fn() })
 }));

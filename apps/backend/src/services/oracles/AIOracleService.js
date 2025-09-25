@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - AI Oracle Service
- * 
+ *
  * Implements decentralized AI oracles for CeDeFi trust and validation:
  * - LLM-powered transaction validation
  * - Decentralized consensus mechanism
@@ -24,12 +25,12 @@ export class AIOracleService {
     this.consensus = new ConsensusEngine();
     this.staking = new StakingManager();
     this.rewards = new RewardManager();
-    
+
     this.oracleNodes = new Map();
     this.validationRequests = new Map();
     this.consensusResults = new Map();
     this.stakingPools = new Map();
-    
+
     this.oracleConfig = {
       minStake: 10000, // $NEXUS tokens
       maxStake: 1000000, // $NEXUS tokens
@@ -53,19 +54,19 @@ export class AIOracleService {
     try {
       // Validate node configuration
       await this.validateNodeConfig(nodeConfig);
-      
+
       // Initialize AI models
       const aiModels = await this.initializeAIModels(nodeConfig);
-      
+
       // Initialize blockchain connection
       const blockchainConnection = await this.blockchain.initializeConnection(nodeConfig);
-      
+
       // Initialize ZK proof system
       const zkSystem = await this.zkProofs.initializeSystem(nodeConfig);
-      
+
       // Initialize staking
       const stakingAccount = await this.staking.initializeAccount(nodeId, nodeConfig);
-      
+
       // Create oracle node
       const oracleNode = {
         nodeId: nodeId,
@@ -83,16 +84,16 @@ export class AIOracleService {
         createdAt: new Date(),
         lastActivity: new Date()
       };
-      
+
       // Register node
       await this.registerOracleNode(oracleNode);
-      
+
       // Start node operations
       this.startNodeOperations(nodeId);
-      
+
       return oracleNode;
     } catch (error) {
-      console.error('Oracle node initialization failed:', error);
+      logger.error('Oracle node initialization failed:', error);
       throw new Error('Failed to initialize oracle node');
     }
   }
@@ -115,28 +116,28 @@ export class AIOracleService {
         timestamp: new Date(),
         status: 'pending'
       };
-      
+
       // Store validation request
       this.validationRequests.set(validationRequest.id, validationRequest);
-      
+
       // Distribute to oracle nodes
       const nodeValidations = await this.distributeValidation(validationRequest);
-      
+
       // Wait for consensus
       const consensusResult = await this.waitForConsensus(validationRequest.id, nodeValidations);
-      
+
       // Process consensus result
       const finalResult = await this.processConsensusResult(validationRequest, consensusResult);
-      
+
       // Update node reputations
       await this.updateNodeReputations(nodeValidations, finalResult);
-      
+
       // Distribute rewards
       await this.distributeRewards(nodeValidations, finalResult);
-      
+
       return finalResult;
     } catch (error) {
-      console.error('Transaction validation failed:', error);
+      logger.error('Transaction validation failed:', error);
       throw new Error('Failed to validate transaction');
     }
   }
@@ -156,7 +157,7 @@ export class AIOracleService {
       recipient: bridgeTransaction.recipient,
       timestamp: bridgeTransaction.timestamp
     };
-    
+
     return await this.validateTransaction(
       bridgeTransaction.hash,
       bridgeTransaction,
@@ -178,7 +179,7 @@ export class AIOracleService {
       legalStatus: rwaData.legalStatus,
       documentation: rwaData.documentation
     };
-    
+
     return await this.validateTransaction(
       rwaData.hash,
       rwaData,
@@ -200,7 +201,7 @@ export class AIOracleService {
       liquidity: strategyData.liquidity,
       fees: strategyData.fees
     };
-    
+
     return await this.validateTransaction(
       strategyData.hash,
       strategyData,
@@ -216,19 +217,19 @@ export class AIOracleService {
       .filter(node => node.isActive && node.reputation > 50)
       .sort((a, b) => b.reputation - a.reputation)
       .slice(0, this.oracleConfig.maxValidators);
-    
+
     const nodeValidations = [];
-    
+
     for (const node of activeNodes) {
       try {
         const validation = await this.performNodeValidation(node, validationRequest);
         nodeValidations.push(validation);
       } catch (error) {
-        console.error(`Node ${node.nodeId} validation failed:`, error);
+        logger.error(`Node ${node.nodeId} validation failed:`, error);
         // Continue with other nodes
       }
     }
-    
+
     return nodeValidations;
   }
 
@@ -237,24 +238,24 @@ export class AIOracleService {
    */
   async performNodeValidation(node, validationRequest) {
     const startTime = Date.now();
-    
+
     try {
       // Use AI to analyze transaction
       const aiAnalysis = await this.grokAPI.generateResponse(
         this.buildValidationPrompt(validationRequest),
         { temperature: 0.3, maxTokens: 1000 }
       );
-      
+
       // Parse AI analysis
       const analysis = this.parseAIAnalysis(aiAnalysis);
-      
+
       // Generate ZK proof
       const zkProof = await this.zkProofs.generateProof({
         transaction: validationRequest.transactionData,
         analysis: analysis,
         nodeId: node.nodeId
       });
-      
+
       // Create validation result
       const validation = {
         nodeId: node.nodeId,
@@ -266,14 +267,14 @@ export class AIOracleService {
         timestamp: new Date(),
         processingTime: Date.now() - startTime
       };
-      
+
       // Update node stats
       node.validations++;
       node.lastActivity = new Date();
-      
+
       return validation;
     } catch (error) {
-      console.error(`Node ${node.nodeId} validation error:`, error);
+      logger.error(`Node ${node.nodeId} validation error:`, error);
       throw error;
     }
   }
@@ -284,22 +285,22 @@ export class AIOracleService {
   async waitForConsensus(requestId, nodeValidations) {
     const startTime = Date.now();
     const timeout = this.oracleConfig.validationTimeout * 1000;
-    
+
     while (Date.now() - startTime < timeout) {
       // Check if we have enough validations
       if (nodeValidations.length >= this.getMinValidations()) {
         // Calculate consensus
         const consensus = this.calculateConsensus(nodeValidations);
-        
+
         if (consensus.agreement >= this.oracleConfig.consensusThreshold) {
           return consensus;
         }
       }
-      
+
       // Wait for more validations
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    
+
     // Timeout - return partial consensus
     return this.calculateConsensus(nodeValidations);
   }
@@ -316,13 +317,13 @@ export class AIOracleService {
         validations: []
       };
     }
-    
+
     const validCount = nodeValidations.filter(v => v.result).length;
     const totalCount = nodeValidations.length;
     const agreement = validCount / totalCount;
-    
+
     const avgConfidence = nodeValidations.reduce((sum, v) => sum + v.confidence, 0) / totalCount;
-    
+
     return {
       agreement: agreement,
       result: agreement >= this.oracleConfig.consensusThreshold,
@@ -347,14 +348,14 @@ export class AIOracleService {
       timestamp: new Date(),
       consensus: consensusResult
     };
-    
+
     // Store consensus result
     this.consensusResults.set(validationRequest.id, finalResult);
-    
+
     // Update validation request
     validationRequest.status = 'completed';
     validationRequest.result = finalResult;
-    
+
     return finalResult;
   }
 
@@ -365,10 +366,10 @@ export class AIOracleService {
     for (const validation of nodeValidations) {
       const node = this.oracleNodes.get(validation.nodeId);
       if (!node) continue;
-      
+
       // Check if validation was correct
       const wasCorrect = validation.result === finalResult.valid;
-      
+
       if (wasCorrect) {
         // Increase reputation
         node.reputation = Math.min(100, node.reputation + 1);
@@ -377,7 +378,7 @@ export class AIOracleService {
         // Decrease reputation
         node.reputation = Math.max(0, node.reputation - 2);
         node.accuracy = (node.accuracy * (node.validations - 1) + 0) / node.validations;
-        
+
         // Check for slashing
         if (node.accuracy < 0.8) {
           await this.slashNode(node, 'low_accuracy');
@@ -392,17 +393,17 @@ export class AIOracleService {
   async distributeRewards(nodeValidations, finalResult) {
     const totalReward = this.calculateTotalReward(finalResult);
     const validNodes = nodeValidations.filter(v => v.result === finalResult.valid);
-    
+
     for (const validation of validNodes) {
       const node = this.oracleNodes.get(validation.nodeId);
       if (!node) continue;
-      
+
       // Calculate node reward based on stake and reputation
       const nodeReward = this.calculateNodeReward(node, totalReward, validNodes.length);
-      
+
       // Distribute reward
       await this.rewards.distributeReward(node.nodeId, nodeReward);
-      
+
       // Update node stats
       node.totalRewards += nodeReward;
     }
@@ -419,25 +420,25 @@ export class AIOracleService {
     if (!node) {
       throw new Error('Oracle node not found');
     }
-    
+
     // Validate stake amount
     if (amount < this.oracleConfig.minStake) {
       throw new Error(`Minimum stake is ${this.oracleConfig.minStake} $NEXUS tokens`);
     }
-    
+
     if (amount > this.oracleConfig.maxStake) {
       throw new Error(`Maximum stake is ${this.oracleConfig.maxStake} $NEXUS tokens`);
     }
-    
+
     // Execute staking
     const stakingResult = await this.staking.stakeTokens(nodeId, amount);
-    
+
     // Update node stake
     node.totalStake += amount;
-    
+
     // Update staking pool
     await this.updateStakingPool(nodeId, amount);
-    
+
     return stakingResult;
   }
 
@@ -452,20 +453,20 @@ export class AIOracleService {
     if (!node) {
       throw new Error('Oracle node not found');
     }
-    
+
     if (amount > node.totalStake) {
       throw new Error('Cannot unstake more than total stake');
     }
-    
+
     // Execute unstaking
     const unstakingResult = await this.staking.unstakeTokens(nodeId, amount);
-    
+
     // Update node stake
     node.totalStake -= amount;
-    
+
     // Update staking pool
     await this.updateStakingPool(nodeId, -amount);
-    
+
     return unstakingResult;
   }
 
@@ -506,12 +507,12 @@ Consider:
     } catch (error) {
       // Fall back to text parsing
     }
-    
+
     // Parse text response
     const validMatch = aiResponse.content.match(/valid[:\s]*(true|false)/i);
     const confidenceMatch = aiResponse.content.match(/confidence[:\s]*(\d+\.?\d*)/i);
     const reasoningMatch = aiResponse.content.match(/reasoning[:\s]*(.+?)(?:\n|$)/i);
-    
+
     return {
       valid: validMatch ? validMatch[1].toLowerCase() === 'true' : false,
       confidence: confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.5,
@@ -542,7 +543,7 @@ Consider:
     const stakeWeight = node.totalStake / this.getTotalStake();
     const reputationWeight = node.reputation / 100;
     const baseReward = totalReward / validNodeCount;
-    
+
     return baseReward * stakeWeight * reputationWeight;
   }
 
@@ -566,28 +567,28 @@ Consider:
     const slashAmount = node.totalStake * this.oracleConfig.slashingRate;
     await this.staking.slashTokens(node.nodeId, slashAmount);
     node.totalStake -= slashAmount;
-    
-    console.log(`Node ${node.nodeId} slashed ${slashAmount} tokens for ${reason}`);
+
+    logger.info(`Node ${node.nodeId} slashed ${slashAmount} tokens for ${reason}`);
   }
 
   startNodeOperations(nodeId) {
     // Start background operations for the node
-    setInterval(async () => {
+    setInterval(async() => {
       try {
         const node = this.oracleNodes.get(nodeId);
         if (!node || !node.isActive) return;
-        
+
         // Update node status
         await this.updateNodeStatus(nodeId);
-        
+
         // Check for new validation requests
         await this.checkValidationRequests(nodeId);
-        
+
         // Update rewards
         await this.updateNodeRewards(nodeId);
-        
+
       } catch (error) {
-        console.error(`Node ${nodeId} operation error:`, error);
+        logger.error(`Node ${nodeId} operation error:`, error);
       }
     }, 30000); // Every 30 seconds
   }

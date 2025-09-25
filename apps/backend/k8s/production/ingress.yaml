@@ -1,0 +1,226 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finnexus-backend-ingress
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "10"
+    nginx.ingress.kubernetes.io/rate-limit-requests: "100"
+    nginx.ingress.kubernetes.io/rate-limit-burst: "50"
+    nginx.ingress.kubernetes.io/rate-limit-nodelay: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://finnexusai.com,https://www.finnexusai.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key"
+    nginx.ingress.kubernetes.io/cors-expose-headers: "Content-Length,Content-Range"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-max-age: "86400"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Permissions-Policy: geolocation=(), microphone=(), camera=()";
+      more_set_headers "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';";
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # Rate limiting
+      limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+      limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+      
+      # Security headers
+      add_header X-Frame-Options DENY always;
+      add_header X-Content-Type-Options nosniff always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+      
+      # Hide server version
+      server_tokens off;
+      
+      # Disable server signature
+      more_clear_headers Server;
+      
+      # Enable gzip compression
+      gzip on;
+      gzip_vary on;
+      gzip_min_length 1024;
+      gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
+      
+      # Enable brotli compression
+      brotli on;
+      brotli_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+      
+      # Cache control
+      location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+      }
+      
+      # API rate limiting
+      location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        limit_req_status 429;
+      }
+      
+      # Login rate limiting
+      location /api/v1/auth/login {
+        limit_req zone=login burst=5 nodelay;
+        limit_req_status 429;
+      }
+      
+      # Health check (no rate limiting)
+      location /api/v1/health {
+        access_log off;
+        limit_req off;
+      }
+      
+      # Metrics endpoint (no rate limiting)
+      location /metrics {
+        access_log off;
+        limit_req off;
+      }
+spec:
+  tls:
+  - hosts:
+    - api.finnexusai.com
+    - api-staging.finnexusai.com
+    - api-dev.finnexusai.com
+    secretName: finnexus-backend-tls
+  rules:
+  - host: api.finnexusai.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: finnexus-backend-cluster
+            port:
+              number: 3000
+  - host: api-staging.finnexusai.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: finnexus-backend-cluster
+            port:
+              number: 3000
+  - host: api-dev.finnexusai.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: finnexus-backend-cluster
+            port:
+              number: 3000
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finnexus-backend-internal
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+    access: internal
+  annotations:
+    kubernetes.io/ingress.class: "nginx-internal"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/rate-limit: "1000"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      # Internal access only
+      allow 10.0.0.0/8;
+      allow 172.16.0.0/12;
+      allow 192.168.0.0/16;
+      deny all;
+spec:
+  rules:
+  - host: api-internal.finnexusai.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: finnexus-backend-cluster
+            port:
+              number: 3000
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finnexus-backend-admin
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+    access: admin
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/rate-limit: "50"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      # Admin access only
+      allow 10.0.0.0/8;
+      allow 172.16.0.0/12;
+      allow 192.168.0.0/16;
+      allow 203.0.113.0/24;  # Admin office IP
+      deny all;
+spec:
+  tls:
+  - hosts:
+    - admin-api.finnexusai.com
+    secretName: finnexus-backend-admin-tls
+  rules:
+  - host: admin-api.finnexusai.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: finnexus-backend-cluster
+            port:
+              number: 3000

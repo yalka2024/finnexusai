@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Cross-Chain Analytics Service
- * 
+ *
  * Provides real-time analytics across CEXs, DEXs, and RWAs:
  * - Multi-chain data aggregation
  * - Real-time yield optimization
@@ -24,7 +25,7 @@ export class CrossChainAnalyticsService {
     this.arbitrageDetector = new ArbitrageDetector();
     this.protocolAnalyzer = new ProtocolAnalyzer();
     this.rwaTracker = new RWATracker();
-    
+
     this.supportedChains = [
       'ethereum',
       'polygon',
@@ -35,7 +36,7 @@ export class CrossChainAnalyticsService {
       'solana',
       'base'
     ];
-    
+
     this.supportedDEXs = [
       'uniswap_v3',
       'sushiswap',
@@ -46,7 +47,7 @@ export class CrossChainAnalyticsService {
       'raydium',
       'orca'
     ];
-    
+
     this.supportedCEXs = [
       'binance',
       'coinbase',
@@ -56,7 +57,7 @@ export class CrossChainAnalyticsService {
       'bybit',
       'kucoin'
     ];
-    
+
     this.analyticsConfig = {
       updateInterval: 5000, // 5 seconds
       maxDataPoints: 1000,
@@ -76,25 +77,25 @@ export class CrossChainAnalyticsService {
     try {
       // Initialize blockchain connections
       await this.initializeBlockchainConnections();
-      
+
       // Initialize data aggregators
       await this.initializeDataAggregators();
-      
+
       // Initialize yield optimizer
       await this.yieldOptimizer.initialize(config.yieldOptimizer);
-      
+
       // Initialize arbitrage detector
       await this.arbitrageDetector.initialize(config.arbitrageDetector);
-      
+
       // Initialize protocol analyzer
       await this.protocolAnalyzer.initialize(config.protocolAnalyzer);
-      
+
       // Initialize RWA tracker
       await this.rwaTracker.initialize(config.rwaTracker);
-      
+
       // Start real-time analytics
       this.startRealTimeAnalytics();
-      
+
       return {
         status: 'initialized',
         supportedChains: this.supportedChains,
@@ -103,7 +104,7 @@ export class CrossChainAnalyticsService {
         config: this.analyticsConfig
       };
     } catch (error) {
-      console.error('Cross-chain analytics initialization failed:', error);
+      logger.error('Cross-chain analytics initialization failed:', error);
       throw new Error('Failed to initialize cross-chain analytics');
     }
   }
@@ -116,22 +117,22 @@ export class CrossChainAnalyticsService {
   async getYieldOpportunities(filters = {}) {
     try {
       const opportunities = [];
-      
+
       // Get yield data from all chains
       for (const chain of this.supportedChains) {
         const chainOpportunities = await this.getChainYieldOpportunities(chain, filters);
         opportunities.push(...chainOpportunities);
       }
-      
+
       // Optimize and rank opportunities
       const optimizedOpportunities = await this.yieldOptimizer.optimizeOpportunities(opportunities);
-      
+
       // Filter by criteria
       const filteredOpportunities = this.filterOpportunities(optimizedOpportunities, filters);
-      
+
       return filteredOpportunities;
     } catch (error) {
-      console.error('Failed to get yield opportunities:', error);
+      logger.error('Failed to get yield opportunities:', error);
       throw new Error('Failed to get yield opportunities');
     }
   }
@@ -144,26 +145,26 @@ export class CrossChainAnalyticsService {
   async getArbitrageOpportunities(filters = {}) {
     try {
       const opportunities = [];
-      
+
       // Get price data from all sources
       const priceData = await this.dataAggregator.getPriceData({
         chains: this.supportedChains,
         dexes: this.supportedDEXs,
         cexes: this.supportedCEXs
       });
-      
+
       // Detect arbitrage opportunities
       const arbitrageOpportunities = await this.arbitrageDetector.detectOpportunities(priceData);
-      
+
       // Calculate potential profits
       const profitableOpportunities = await this.calculateArbitrageProfits(arbitrageOpportunities);
-      
+
       // Filter by criteria
       const filteredOpportunities = this.filterArbitrageOpportunities(profitableOpportunities, filters);
-      
+
       return filteredOpportunities;
     } catch (error) {
-      console.error('Failed to get arbitrage opportunities:', error);
+      logger.error('Failed to get arbitrage opportunities:', error);
       throw new Error('Failed to get arbitrage opportunities');
     }
   }
@@ -181,16 +182,16 @@ export class CrossChainAnalyticsService {
         chains: this.supportedChains,
         timeRange: filters.timeRange || '7d'
       });
-      
+
       // Analyze protocol performance
       const analysis = await this.protocolAnalyzer.analyzeProtocol(protocol, protocolData);
-      
+
       // Calculate risk metrics
       const riskMetrics = await this.calculateProtocolRisk(protocol, analysis);
-      
+
       // Generate recommendations
       const recommendations = await this.generateProtocolRecommendations(analysis, riskMetrics);
-      
+
       return {
         protocol: protocol,
         analysis: analysis,
@@ -199,7 +200,7 @@ export class CrossChainAnalyticsService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error(`Failed to analyze protocol ${protocol}:`, error);
+      logger.error(`Failed to analyze protocol ${protocol}:`, error);
       throw new Error(`Failed to analyze protocol ${protocol}`);
     }
   }
@@ -213,16 +214,16 @@ export class CrossChainAnalyticsService {
     try {
       // Get RWA data from all sources
       const rwaData = await this.rwaTracker.getRWAData(filters);
-      
+
       // Analyze RWA performance
       const performanceData = await this.analyzeRWAPerformance(rwaData);
-      
+
       // Calculate risk-adjusted returns
       const riskAdjustedReturns = await this.calculateRiskAdjustedReturns(performanceData);
-      
+
       // Generate insights
       const insights = await this.generateRWAInsights(performanceData, riskAdjustedReturns);
-      
+
       return {
         rwaData: performanceData,
         riskAdjustedReturns: riskAdjustedReturns,
@@ -230,7 +231,7 @@ export class CrossChainAnalyticsService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Failed to track RWA performance:', error);
+      logger.error('Failed to track RWA performance:', error);
       throw new Error('Failed to track RWA performance');
     }
   }
@@ -245,19 +246,19 @@ export class CrossChainAnalyticsService {
     try {
       // Get user portfolio from all chains
       const portfolio = await this.getUserPortfolio(userId);
-      
+
       // Analyze portfolio performance
       const performance = await this.analyzePortfolioPerformance(portfolio);
-      
+
       // Calculate risk metrics
       const riskMetrics = await this.calculatePortfolioRisk(portfolio);
-      
+
       // Find optimization opportunities
       const optimizations = await this.findOptimizationOpportunities(portfolio, filters);
-      
+
       // Generate recommendations
       const recommendations = await this.generatePortfolioRecommendations(portfolio, performance, riskMetrics);
-      
+
       return {
         userId: userId,
         portfolio: portfolio,
@@ -268,7 +269,7 @@ export class CrossChainAnalyticsService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error(`Failed to get portfolio analytics for user ${userId}:`, error);
+      logger.error(`Failed to get portfolio analytics for user ${userId}:`, error);
       throw new Error('Failed to get portfolio analytics');
     }
   }
@@ -278,19 +279,19 @@ export class CrossChainAnalyticsService {
    */
   async getChainYieldOpportunities(chain, filters) {
     const opportunities = [];
-    
+
     // Get DEX yield opportunities
     const dexOpportunities = await this.getDEXYieldOpportunities(chain, filters);
     opportunities.push(...dexOpportunities);
-    
+
     // Get lending protocol opportunities
     const lendingOpportunities = await this.getLendingYieldOpportunities(chain, filters);
     opportunities.push(...lendingOpportunities);
-    
+
     // Get staking opportunities
     const stakingOpportunities = await this.getStakingYieldOpportunities(chain, filters);
     opportunities.push(...stakingOpportunities);
-    
+
     return opportunities;
   }
 
@@ -299,17 +300,17 @@ export class CrossChainAnalyticsService {
    */
   async getDEXYieldOpportunities(chain, filters) {
     const opportunities = [];
-    
+
     for (const dex of this.supportedDEXs) {
       try {
         const dexData = await this.dataAggregator.getDEXData(chain, dex);
         const dexOpportunities = await this.yieldOptimizer.findDEXOpportunities(dexData, filters);
         opportunities.push(...dexOpportunities);
       } catch (error) {
-        console.error(`Failed to get ${dex} opportunities on ${chain}:`, error);
+        logger.error(`Failed to get ${dex} opportunities on ${chain}:`, error);
       }
     }
-    
+
     return opportunities;
   }
 
@@ -318,19 +319,19 @@ export class CrossChainAnalyticsService {
    */
   async getLendingYieldOpportunities(chain, filters) {
     const opportunities = [];
-    
+
     const lendingProtocols = ['aave', 'compound', 'venus', 'benqi'];
-    
+
     for (const protocol of lendingProtocols) {
       try {
         const protocolData = await this.dataAggregator.getLendingData(chain, protocol);
         const protocolOpportunities = await this.yieldOptimizer.findLendingOpportunities(protocolData, filters);
         opportunities.push(...protocolOpportunities);
       } catch (error) {
-        console.error(`Failed to get ${protocol} opportunities on ${chain}:`, error);
+        logger.error(`Failed to get ${protocol} opportunities on ${chain}:`, error);
       }
     }
-    
+
     return opportunities;
   }
 
@@ -339,19 +340,19 @@ export class CrossChainAnalyticsService {
    */
   async getStakingYieldOpportunities(chain, filters) {
     const opportunities = [];
-    
+
     const stakingProtocols = ['lido', 'rocket_pool', 'frax', 'stader'];
-    
+
     for (const protocol of stakingProtocols) {
       try {
         const protocolData = await this.dataAggregator.getStakingData(chain, protocol);
         const protocolOpportunities = await this.yieldOptimizer.findStakingOpportunities(protocolData, filters);
         opportunities.push(...protocolOpportunities);
       } catch (error) {
-        console.error(`Failed to get ${protocol} opportunities on ${chain}:`, error);
+        logger.error(`Failed to get ${protocol} opportunities on ${chain}:`, error);
       }
     }
-    
+
     return opportunities;
   }
 
@@ -360,11 +361,11 @@ export class CrossChainAnalyticsService {
    */
   async calculateArbitrageProfits(opportunities) {
     const profitableOpportunities = [];
-    
+
     for (const opportunity of opportunities) {
       try {
         const profit = await this.arbitrageDetector.calculateProfit(opportunity);
-        
+
         if (profit > this.analyticsConfig.arbitrageThreshold) {
           profitableOpportunities.push({
             ...opportunity,
@@ -373,10 +374,10 @@ export class CrossChainAnalyticsService {
           });
         }
       } catch (error) {
-        console.error('Failed to calculate arbitrage profit:', error);
+        logger.error('Failed to calculate arbitrage profit:', error);
       }
     }
-    
+
     return profitableOpportunities;
   }
 
@@ -389,27 +390,27 @@ export class CrossChainAnalyticsService {
       if (filters.minYield && opportunity.apy < filters.minYield) {
         return false;
       }
-      
+
       // Filter by maximum risk
       if (filters.maxRisk && opportunity.risk > filters.maxRisk) {
         return false;
       }
-      
+
       // Filter by minimum TVL
       if (filters.minTVL && opportunity.tvl < filters.minTVL) {
         return false;
       }
-      
+
       // Filter by chain
       if (filters.chains && !filters.chains.includes(opportunity.chain)) {
         return false;
       }
-      
+
       // Filter by protocol
       if (filters.protocols && !filters.protocols.includes(opportunity.protocol)) {
         return false;
       }
-      
+
       return true;
     });
   }
@@ -423,17 +424,17 @@ export class CrossChainAnalyticsService {
       if (filters.minProfit && opportunity.profit < filters.minProfit) {
         return false;
       }
-      
+
       // Filter by minimum profit percentage
       if (filters.minProfitPercentage && opportunity.profitPercentage < filters.minProfitPercentage) {
         return false;
       }
-      
+
       // Filter by maximum slippage
       if (filters.maxSlippage && opportunity.slippage > filters.maxSlippage) {
         return false;
       }
-      
+
       return true;
     });
   }
@@ -449,9 +450,9 @@ export class CrossChainAnalyticsService {
       regulatoryRisk: analysis.regulatoryRisk || 0.5,
       operationalRisk: analysis.operationalRisk || 0.5
     };
-    
+
     const totalRisk = Object.values(riskFactors).reduce((sum, risk) => sum + risk, 0) / Object.keys(riskFactors).length;
-    
+
     return {
       totalRisk: totalRisk,
       riskFactors: riskFactors,
@@ -464,7 +465,7 @@ export class CrossChainAnalyticsService {
    */
   async generateProtocolRecommendations(analysis, riskMetrics) {
     const recommendations = [];
-    
+
     if (riskMetrics.totalRisk > 0.8) {
       recommendations.push({
         type: 'warning',
@@ -472,7 +473,7 @@ export class CrossChainAnalyticsService {
         priority: 'high'
       });
     }
-    
+
     if (analysis.apy > 0.2 && riskMetrics.totalRisk < 0.5) {
       recommendations.push({
         type: 'opportunity',
@@ -480,7 +481,7 @@ export class CrossChainAnalyticsService {
         priority: 'medium'
       });
     }
-    
+
     if (analysis.tvl < 1000000) {
       recommendations.push({
         type: 'caution',
@@ -488,7 +489,7 @@ export class CrossChainAnalyticsService {
         priority: 'medium'
       });
     }
-    
+
     return recommendations;
   }
 
@@ -497,7 +498,7 @@ export class CrossChainAnalyticsService {
    */
   async analyzeRWAPerformance(rwaData) {
     const performanceData = [];
-    
+
     for (const rwa of rwaData) {
       const performance = {
         asset: rwa.asset,
@@ -509,10 +510,10 @@ export class CrossChainAnalyticsService {
         liquidity: rwa.liquidity || 0.5,
         risk: rwa.risk || 0.5
       };
-      
+
       performanceData.push(performance);
     }
-    
+
     return performanceData;
   }
 
@@ -532,10 +533,10 @@ export class CrossChainAnalyticsService {
    */
   async generateRWAInsights(performanceData, riskAdjustedReturns) {
     const insights = [];
-    
+
     const avgReturn = performanceData.reduce((sum, asset) => sum + asset.return, 0) / performanceData.length;
     const avgRisk = performanceData.reduce((sum, asset) => sum + asset.risk, 0) / performanceData.length;
-    
+
     if (avgReturn > 0.1) {
       insights.push({
         type: 'positive',
@@ -543,7 +544,7 @@ export class CrossChainAnalyticsService {
         priority: 'medium'
       });
     }
-    
+
     if (avgRisk > 0.7) {
       insights.push({
         type: 'warning',
@@ -551,7 +552,7 @@ export class CrossChainAnalyticsService {
         priority: 'high'
       });
     }
-    
+
     return insights;
   }
 
@@ -565,7 +566,7 @@ export class CrossChainAnalyticsService {
       totalValue: 0,
       chains: []
     };
-    
+
     for (const chain of this.supportedChains) {
       try {
         const chainPortfolio = await this.blockchain.getUserPortfolio(chain, userId);
@@ -573,10 +574,10 @@ export class CrossChainAnalyticsService {
         portfolio.totalValue += chainPortfolio.totalValue;
         portfolio.chains.push(chain);
       } catch (error) {
-        console.error(`Failed to get portfolio for ${chain}:`, error);
+        logger.error(`Failed to get portfolio for ${chain}:`, error);
       }
     }
-    
+
     return portfolio;
   }
 
@@ -593,10 +594,10 @@ export class CrossChainAnalyticsService {
       volatility: 0,
       sharpeRatio: 0
     };
-    
+
     // Calculate performance metrics
     // This would be implemented with actual portfolio data
-    
+
     return performance;
   }
 
@@ -611,10 +612,10 @@ export class CrossChainAnalyticsService {
       marketRisk: 0,
       riskLevel: 'medium'
     };
-    
+
     // Calculate risk metrics
     // This would be implemented with actual risk models
-    
+
     return risk;
   }
 
@@ -623,15 +624,15 @@ export class CrossChainAnalyticsService {
    */
   async findOptimizationOpportunities(portfolio, filters) {
     const opportunities = [];
-    
+
     // Find yield optimization opportunities
     const yieldOpportunities = await this.getYieldOpportunities(filters);
     opportunities.push(...yieldOpportunities);
-    
+
     // Find arbitrage opportunities
     const arbitrageOpportunities = await this.getArbitrageOpportunities(filters);
     opportunities.push(...arbitrageOpportunities);
-    
+
     return opportunities;
   }
 
@@ -640,7 +641,7 @@ export class CrossChainAnalyticsService {
    */
   async generatePortfolioRecommendations(portfolio, performance, riskMetrics) {
     const recommendations = [];
-    
+
     if (riskMetrics.totalRisk > 0.8) {
       recommendations.push({
         type: 'risk_reduction',
@@ -648,7 +649,7 @@ export class CrossChainAnalyticsService {
         priority: 'high'
       });
     }
-    
+
     if (performance.totalReturn < 0.05) {
       recommendations.push({
         type: 'yield_optimization',
@@ -656,7 +657,7 @@ export class CrossChainAnalyticsService {
         priority: 'medium'
       });
     }
-    
+
     return recommendations;
   }
 
@@ -678,7 +679,7 @@ export class CrossChainAnalyticsService {
       try {
         await this.blockchain.initializeChain(chain);
       } catch (error) {
-        console.error(`Failed to initialize ${chain}:`, error);
+        logger.error(`Failed to initialize ${chain}:`, error);
       }
     }
   }
@@ -698,22 +699,22 @@ export class CrossChainAnalyticsService {
    * Start real-time analytics
    */
   startRealTimeAnalytics() {
-    setInterval(async () => {
+    setInterval(async() => {
       try {
         // Update yield opportunities
         await this.updateYieldOpportunities();
-        
+
         // Update arbitrage opportunities
         await this.updateArbitrageOpportunities();
-        
+
         // Update protocol analytics
         await this.updateProtocolAnalytics();
-        
+
         // Update RWA tracking
         await this.updateRWATracking();
-        
+
       } catch (error) {
-        console.error('Real-time analytics update failed:', error);
+        logger.error('Real-time analytics update failed:', error);
       }
     }, this.analyticsConfig.updateInterval);
   }

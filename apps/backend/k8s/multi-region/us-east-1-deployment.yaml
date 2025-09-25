@@ -1,0 +1,260 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finnexus-backend-us-east-1
+  namespace: finnexus
+  labels:
+    app: finnexus-backend
+    region: us-east-1
+    version: v1.0.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: finnexus-backend
+      region: us-east-1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: finnexus-backend
+        region: us-east-1
+        version: v1.0.0
+      annotations:
+        checksum/config: {{ include (print .Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print .Template.BasePath "/secrets.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: finnexus-backend-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: finnexus-backend
+                topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - us-east-1a
+                      - us-east-1b
+                      - us-east-1c
+      containers:
+        - name: finnexus-backend
+          image: finnexusai/backend:{{ .Values.image.tag | default "latest" }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: REGION
+              value: "us-east-1"
+            - name: PRIMARY_REGION
+              value: "true"
+            - name: MULTI_REGION_ENABLED
+              value: "true"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: finnexus-backend-secrets
+                  key: database-url-us-east-1
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: finnexus-backend-secrets
+                  key: redis-url-us-east-1
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: finnexus-backend-secrets
+                  key: mongo-uri-us-east-1
+          envFrom:
+            - configMapRef:
+                name: finnexus-backend-config-us-east-1
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu | default "200m" }}
+              memory: {{ .Values.resources.requests.memory | default "256Mi" }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu | default "500m" }}
+              memory: {{ .Values.resources.limits.memory | default "512Mi" }}
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: var-cache
+              mountPath: /var/cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: var-cache
+          emptyDir: {}
+      tolerations:
+        - key: "region"
+          operator: "Equal"
+          value: "us-east-1"
+          effect: "NoSchedule"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finnexus-backend-us-east-1
+  namespace: finnexus
+  labels:
+    app: finnexus-backend
+    region: us-east-1
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  type: LoadBalancer
+  selector:
+    app: finnexus-backend
+    region: us-east-1
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: http
+      name: http
+    - protocol: TCP
+      port: 443
+      targetPort: http
+      name: https
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finnexus-backend-ingress-us-east-1
+  namespace: finnexus
+  labels:
+    app: finnexus-backend
+    region: us-east-1
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "route"
+    nginx.ingress.kubernetes.io/session-cookie-hash: "sha1"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api-us-east-1.finnexusai.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: finnexus-backend-us-east-1
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - api-us-east-1.finnexusai.com
+      secretName: finnexus-backend-tls-us-east-1
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: finnexus-backend-config-us-east-1
+  namespace: finnexus
+  labels:
+    app: finnexus-backend
+    region: us-east-1
+data:
+  NODE_ENV: production
+  PORT: "3000"
+  REGION: us-east-1
+  PRIMARY_REGION: "true"
+  MULTI_REGION_ENABLED: "true"
+  LOG_LEVEL: info
+  # Database connection details (non-sensitive parts)
+  PG_HOST: postgres-us-east-1.finnexus.svc.cluster.local
+  PG_PORT: "5432"
+  PG_USER: finnexus_user
+  PG_DATABASE: finnexus_db
+  MONGO_URI: mongodb://mongodb-us-east-1.finnexus.svc.cluster.local:27017/finnexus
+  REDIS_HOST: redis-us-east-1.finnexus.svc.cluster.local
+  REDIS_PORT: "6379"
+  # Monitoring and Tracing
+  SENTRY_DSN: "your-sentry-dsn"
+  JAEGER_AGENT_HOST: jaeger-agent.monitoring.svc.cluster.local
+  ELASTICSEARCH_HOST: elasticsearch-master.elastic.svc.cluster.local
+  # Multi-region configuration
+  MULTI_REGION_ROUTING_STRATEGY: "geographic"
+  MULTI_REGION_FAILOVER_ENABLED: "true"
+  # Other application-specific configurations
+  API_VERSION: "1.0.0"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: finnexus-backend-secrets
+  namespace: finnexus
+  labels:
+    app: finnexus-backend
+    region: us-east-1
+type: Opaque
+data:
+  # Base64 encoded sensitive values for us-east-1
+  JWT_SECRET: "eW91ci1qd3Qtc2VjcmV0LWtleQ=="
+  PG_PASSWORD: "eW91ci1wZz1wYXNzd29yZA=="
+  MONGO_PASSWORD: "eW91ci1tb25nby1wYXNzd29yZA=="
+  REDIS_PASSWORD: "eW91ci1yZWRpcy1wYXNzd29yZA=="
+  API_KEY_MASTER: "eW91ci1hcGkta2V5LW1hc3Rlcg=="
+  # Region-specific secrets
+  database-url-us-east-1: "cG9zdGdyZXM6Ly91c2VyOnBhc3N3b3JkQHBvc3RncmVzLXVzLWVhc3QtMS5maW5uZXh1cy5zdmMuY2x1c3Rlci5sb2NhbDo1NDMyL2Zpbm5ldHVzX2Ri"
+  redis-url-us-east-1: "cmVkaXM6Ly9yZWRpcy11cy1lYXN0LTEuZmlubmV4dXMuc3ZjLmNsdXN0ZXIubG9jYWw6NjM3OQ=="
+  mongo-uri-us-east-1: "bW9uZ29kYjovL3VzZXI6cGFzc3dvcmRAbW9uZ29kYi11cy1lYXN0LTEuZmlubmV4dXMuc3ZjLmNsdXN0ZXIubG9jYWw6MjcwMTcvZmlubmV4dXM="

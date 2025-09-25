@@ -1,0 +1,480 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: finnexus-backend-rollout
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+spec:
+  replicas: 3
+  strategy:
+    blueGreen:
+      activeService: finnexus-backend-active
+      previewService: finnexus-backend-preview
+      autoPromotionEnabled: false
+      scaleDownDelaySeconds: 30
+      prePromotionAnalysis:
+        templates:
+        - templateName: success-rate
+        args:
+        - name: service-name
+          value: finnexus-backend-preview
+      postPromotionAnalysis:
+        templates:
+        - templateName: success-rate
+        args:
+        - name: service-name
+          value: finnexus-backend-active
+      antiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - finnexus-backend
+            topologyKey: kubernetes.io/hostname
+  selector:
+    matchLabels:
+      app: finnexus-backend
+  template:
+    metadata:
+      labels:
+        app: finnexus-backend
+        version: v1.0.0
+        component: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: finnexus-backend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: backend
+        image: finnexusai/backend:v1.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=1536 --max-semi-space-size=128"
+        envFrom:
+        - secretRef:
+            name: finnexus-backend-secrets
+        - configMapRef:
+            name: finnexus-backend-config
+        resources:
+          limits:
+            cpu: "2000m"
+            memory: "2Gi"
+            ephemeral-storage: "1Gi"
+          requests:
+            cpu: "1000m"
+            memory: "1Gi"
+            ephemeral-storage: "500Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health/ready
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        startupProbe:
+          httpGet:
+            path: /api/v1/health/startup
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+        - name: uploads
+          mountPath: /app/uploads
+        - name: tmp
+          mountPath: /tmp
+        - name: ssl-certs
+          mountPath: /app/ssl
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE
+          seccompProfile:
+            type: RuntimeDefault
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 15"]
+      volumes:
+      - name: logs
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: uploads
+        emptyDir:
+          sizeLimit: 2Gi
+      - name: tmp
+        emptyDir:
+          sizeLimit: 100Mi
+      - name: ssl-certs
+        secret:
+          secretName: finnexus-ssl-certs
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      nodeSelector:
+        node-type: "backend"
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finnexus-backend-active
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    service-type: active
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: finnexus-backend
+    rollouts-pod-template-hash: "active"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finnexus-backend-preview
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    service-type: preview
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: finnexus-backend
+    rollouts-pod-template-hash: "preview"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finnexus-backend
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    service-type: main
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 3000
+    protocol: TCP
+    name: https
+  selector:
+    app: finnexus-backend
+    rollouts-pod-template-hash: "active"
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: finnexus-production
+spec:
+  metrics:
+  - name: success-rate
+    interval: 30s
+    successCondition: result[0] >= 0.95
+    failureCondition: result[0] < 0.95
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(http_requests_total{service="{{args.service-name}}",status!~"5.."}[5m])) /
+          sum(rate(http_requests_total{service="{{args.service-name}}"}[5m]))
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: error-rate
+  namespace: finnexus-production
+spec:
+  metrics:
+  - name: error-rate
+    interval: 30s
+    successCondition: result[0] <= 0.05
+    failureCondition: result[0] > 0.05
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(http_requests_total{service="{{args.service-name}}",status=~"5.."}[5m])) /
+          sum(rate(http_requests_total{service="{{args.service-name}}"}[5m]))
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: response-time
+  namespace: finnexus-production
+spec:
+  metrics:
+  - name: response-time
+    interval: 30s
+    successCondition: result[0] <= 500
+    failureCondition: result[0] > 500
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: finnexus-backend-config
+  namespace: finnexus-production
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  ENABLE_MONITORING: "true"
+  ENABLE_TRACING: "true"
+  ENABLE_HEALTH_CHECKS: "true"
+  ENABLE_RESOURCE_MONITORING: "true"
+  ENABLE_SECURITY_HEADERS: "true"
+  ENABLE_RATE_LIMITING: "true"
+  ENABLE_INPUT_SANITIZATION: "true"
+  ENABLE_API_VERSIONING: "true"
+  ENABLE_DATABASE_ENCRYPTION: "true"
+  ENABLE_DATABASE_REPLICATION: "true"
+  ENABLE_BACKUP_MANAGEMENT: "true"
+  ENABLE_SSL_MANAGEMENT: "true"
+  ENABLE_SECRETS_MANAGEMENT: "true"
+  ENABLE_CIRCUIT_BREAKER: "true"
+  ENABLE_GRACEFUL_SHUTDOWN: "true"
+  ENABLE_RESOURCE_LIMITS: "true"
+  ENABLE_BLUE_GREEN_DEPLOYMENT: "true"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: finnexus-backend-secrets
+  namespace: finnexus-production
+type: Opaque
+data:
+  DATABASE_URL: <base64-encoded-database-url>
+  MONGO_URI: <base64-encoded-mongo-uri>
+  REDIS_URL: <base64-encoded-redis-url>
+  JWT_SECRET: <base64-encoded-jwt-secret>
+  ENCRYPTION_KEY: <base64-encoded-encryption-key>
+  API_KEY_SECRET: <base64-encoded-api-key-secret>
+  SSL_CERT: <base64-encoded-ssl-cert>
+  SSL_KEY: <base64-encoded-ssl-key>
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: finnexus-backend
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: finnexus-backend-role
+  namespace: finnexus-production
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["argoproj.io"]
+  resources: ["rollouts"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: finnexus-backend-rolebinding
+  namespace: finnexus-production
+subjects:
+- kind: ServiceAccount
+  name: finnexus-backend
+  namespace: finnexus-production
+roleRef:
+  kind: Role
+  name: finnexus-backend-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: finnexus-backend-pdb
+  namespace: finnexus-production
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: finnexus-backend
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: finnexus-backend-hpa
+  namespace: finnexus-production
+spec:
+  scaleTargetRef:
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: finnexus-backend-rollout
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+
+---
+apiVersion: v1
+kind: NetworkPolicy
+metadata:
+  name: finnexus-backend-netpol
+  namespace: finnexus-production
+spec:
+  podSelector:
+    matchLabels:
+      app: finnexus-backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: finnexus-production
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: finnexus-production
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 27017
+    - protocol: TCP
+      port: 6379
+    - protocol: TCP
+      port: 9090
+    - protocol: TCP
+      port: 9200
+    - protocol: TCP
+      port: 5601

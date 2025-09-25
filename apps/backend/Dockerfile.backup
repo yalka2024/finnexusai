@@ -1,0 +1,59 @@
+# FinNexusAI Backup Service Dockerfile
+# Specialized container for database backup operations
+
+FROM alpine:3.18
+
+# Install required packages
+RUN apk add --no-cache \
+    postgresql-client \
+    mongodb-tools \
+    curl \
+    bash \
+    gzip \
+    tar \
+    openssl \
+    python3 \
+    py3-pip \
+    cron \
+    dumb-init
+
+# Install Python dependencies for backup scripts
+RUN pip3 install --no-cache-dir \
+    boto3 \
+    azure-storage-blob \
+    google-cloud-storage
+
+# Create backup user
+RUN addgroup -g 1001 -S backup && \
+    adduser -S backup -u 1001 -G backup
+
+# Create backup directories
+RUN mkdir -p /var/backups/finnexus /etc/backup /var/log/backup && \
+    chown -R backup:backup /var/backups/finnexus /etc/backup /var/log/backup
+
+# Set working directory
+WORKDIR /app
+
+# Copy backup scripts
+COPY --chown=backup:backup scripts/backup/ ./scripts/
+COPY --chown=backup:backup config/backup/ ./config/
+
+# Make scripts executable
+RUN chmod +x ./scripts/*.sh
+
+# Switch to backup user
+USER backup
+
+# Set environment variables
+ENV BACKUP_BASE_PATH=/var/backups/finnexus
+ENV LOG_LEVEL=INFO
+
+# Health check
+HEALTHCHECK --interval=300s --timeout=30s --start-period=60s --retries=3 \
+    CMD ./scripts/health-check.sh || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start cron daemon for scheduled backups
+CMD ["bash", "-c", "cron && tail -f /var/log/backup/backup.log"]

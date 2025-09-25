@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Learning Loop Service
- * 
+ *
  * Continuous improvement through reinforcement learning:
  * - Agent performance monitoring
  * - Strategy optimization
@@ -23,12 +24,12 @@ export class LearningLoopService {
     this.performanceAnalyzer = new PerformanceAnalyzer();
     this.strategyOptimizer = new StrategyOptimizer();
     this.feedbackProcessor = new FeedbackProcessor();
-    
+
     this.learningData = new Map();
     this.performanceHistory = new Map();
     this.strategyUpdates = new Map();
     this.rewardHistory = new Map();
-    
+
     this.learningConfig = {
       learningRate: 0.01,
       discountFactor: 0.95,
@@ -53,19 +54,19 @@ export class LearningLoopService {
     try {
       this.userId = userId;
       this.learningConfig = { ...this.learningConfig, ...config };
-      
+
       // Initialize components
       await this.rlEngine.initialize(userId, config.rlEngine);
       await this.performanceAnalyzer.initialize(userId, config.performance);
       await this.strategyOptimizer.initialize(userId, config.strategy);
       await this.feedbackProcessor.initialize(userId, config.feedback);
-      
+
       // Initialize learning data structures
       this.initializeLearningData(userId);
-      
+
       // Start learning loop
       this.startLearningLoop(userId);
-      
+
       return {
         status: 'initialized',
         userId: userId,
@@ -73,7 +74,7 @@ export class LearningLoopService {
         learningEnabled: this.learningConfig.learningEnabled
       };
     } catch (error) {
-      console.error('Learning loop initialization failed:', error);
+      logger.error('Learning loop initialization failed:', error);
       throw new Error('Failed to initialize learning loop service');
     }
   }
@@ -89,13 +90,13 @@ export class LearningLoopService {
       if (!this.learningConfig.learningEnabled) {
         return { status: 'disabled' };
       }
-      
+
       // Analyze portfolio performance
       const performance = await this.performanceAnalyzer.analyzePortfolioPerformance(portfolioResult);
-      
+
       // Calculate reward
       const reward = await this.calculateReward(performance, 'portfolio');
-      
+
       // Store learning data
       await this.storeLearningData(userId, 'portfolio', {
         action: portfolioResult.action,
@@ -104,13 +105,13 @@ export class LearningLoopService {
         performance: performance,
         timestamp: new Date()
       });
-      
+
       // Update RL model
       await this.updateRLModel(userId, 'portfolio', performance, reward);
-      
+
       // Check for strategy updates
       await this.checkStrategyUpdates(userId, 'portfolio', performance);
-      
+
       return {
         success: true,
         performance: performance,
@@ -119,7 +120,7 @@ export class LearningLoopService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Portfolio learning failed:', error);
+      logger.error('Portfolio learning failed:', error);
       throw new Error('Failed to start portfolio learning');
     }
   }
@@ -135,13 +136,13 @@ export class LearningLoopService {
       if (!this.learningConfig.learningEnabled) {
         return { status: 'disabled' };
       }
-      
+
       // Analyze trading performance
       const performance = await this.performanceAnalyzer.analyzeTradingPerformance(tradeResult);
-      
+
       // Calculate reward
       const reward = await this.calculateReward(performance, 'trading');
-      
+
       // Store learning data
       await this.storeLearningData(userId, 'trading', {
         action: tradeResult.action,
@@ -150,13 +151,13 @@ export class LearningLoopService {
         performance: performance,
         timestamp: new Date()
       });
-      
+
       // Update RL model
       await this.updateRLModel(userId, 'trading', performance, reward);
-      
+
       // Check for strategy updates
       await this.checkStrategyUpdates(userId, 'trading', performance);
-      
+
       return {
         success: true,
         performance: performance,
@@ -165,7 +166,7 @@ export class LearningLoopService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Trading learning failed:', error);
+      logger.error('Trading learning failed:', error);
       throw new Error('Failed to update trading learning');
     }
   }
@@ -181,13 +182,13 @@ export class LearningLoopService {
       if (!this.learningConfig.learningEnabled) {
         return { status: 'disabled' };
       }
-      
+
       // Analyze compliance performance
       const performance = await this.performanceAnalyzer.analyzeCompliancePerformance(complianceResult);
-      
+
       // Calculate reward
       const reward = await this.calculateReward(performance, 'compliance');
-      
+
       // Store learning data
       await this.storeLearningData(userId, 'compliance', {
         action: complianceResult.action,
@@ -196,13 +197,13 @@ export class LearningLoopService {
         performance: performance,
         timestamp: new Date()
       });
-      
+
       // Update RL model
       await this.updateRLModel(userId, 'compliance', performance, reward);
-      
+
       // Check for strategy updates
       await this.checkStrategyUpdates(userId, 'compliance', performance);
-      
+
       return {
         success: true,
         performance: performance,
@@ -211,7 +212,7 @@ export class LearningLoopService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Compliance learning failed:', error);
+      logger.error('Compliance learning failed:', error);
       throw new Error('Failed to update compliance learning');
     }
   }
@@ -227,13 +228,13 @@ export class LearningLoopService {
       if (!this.learningConfig.learningEnabled) {
         return { status: 'disabled' };
       }
-      
+
       // Analyze yield performance
       const performance = await this.performanceAnalyzer.analyzeYieldPerformance(yieldResult);
-      
+
       // Calculate reward
       const reward = await this.calculateReward(performance, 'yield');
-      
+
       // Store learning data
       await this.storeLearningData(userId, 'yield', {
         action: yieldResult.action,
@@ -242,13 +243,13 @@ export class LearningLoopService {
         performance: performance,
         timestamp: new Date()
       });
-      
+
       // Update RL model
       await this.updateRLModel(userId, 'yield', performance, reward);
-      
+
       // Check for strategy updates
       await this.checkStrategyUpdates(userId, 'yield', performance);
-      
+
       return {
         success: true,
         performance: performance,
@@ -257,7 +258,7 @@ export class LearningLoopService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Yield learning failed:', error);
+      logger.error('Yield learning failed:', error);
       throw new Error('Failed to update yield learning');
     }
   }
@@ -271,33 +272,33 @@ export class LearningLoopService {
   async calculateReward(performance, agentType) {
     try {
       let reward = 0;
-      
+
       switch (this.learningConfig.rewardFunction) {
-        case 'sharpe_ratio':
-          reward = performance.sharpeRatio || 0;
-          break;
-        case 'profit':
-          reward = performance.profit || 0;
-          break;
-        case 'accuracy':
-          reward = performance.accuracy || 0;
-          break;
-        case 'composite':
-          reward = this.calculateCompositeReward(performance, agentType);
-          break;
-        default:
-          reward = performance.sharpeRatio || 0;
+      case 'sharpe_ratio':
+        reward = performance.sharpeRatio || 0;
+        break;
+      case 'profit':
+        reward = performance.profit || 0;
+        break;
+      case 'accuracy':
+        reward = performance.accuracy || 0;
+        break;
+      case 'composite':
+        reward = this.calculateCompositeReward(performance, agentType);
+        break;
+      default:
+        reward = performance.sharpeRatio || 0;
       }
-      
+
       // Normalize reward to [-1, 1]
       reward = Math.max(-1, Math.min(1, reward));
-      
+
       // Store reward history
       await this.storeRewardHistory(agentType, reward, performance);
-      
+
       return reward;
     } catch (error) {
-      console.error('Reward calculation failed:', error);
+      logger.error('Reward calculation failed:', error);
       return 0;
     }
   }
@@ -315,15 +316,15 @@ export class LearningLoopService {
       compliance: { accuracy: 0.6, violations: 0.2, efficiency: 0.2 },
       yield: { optimization: 0.5, profit: 0.3, risk: 0.2 }
     };
-    
+
     const agentWeights = weights[agentType] || weights.portfolio;
     let reward = 0;
-    
+
     for (const [metric, weight] of Object.entries(agentWeights)) {
       const value = performance[metric] || 0;
       reward += value * weight;
     }
-    
+
     return reward;
   }
 
@@ -338,25 +339,25 @@ export class LearningLoopService {
     try {
       // Get recent learning data
       const recentData = await this.getRecentLearningData(userId, agentType);
-      
+
       if (recentData.length < this.learningConfig.batchSize) {
         return; // Not enough data for training
       }
-      
+
       // Prepare training batch
       const trainingBatch = recentData.slice(-this.learningConfig.batchSize);
-      
+
       // Update RL model
       await this.rlEngine.updateModel(userId, agentType, trainingBatch, {
         learningRate: this.learningConfig.learningRate,
         discountFactor: this.learningConfig.discountFactor
       });
-      
+
       // Update performance history
       await this.updatePerformanceHistory(userId, agentType, performance);
-      
+
     } catch (error) {
-      console.error('RL model update failed:', error);
+      logger.error('RL model update failed:', error);
     }
   }
 
@@ -370,20 +371,20 @@ export class LearningLoopService {
     try {
       // Get historical performance
       const historicalPerformance = await this.getPerformanceHistory(userId, agentType);
-      
+
       if (historicalPerformance.length < 10) {
         return; // Not enough data for comparison
       }
-      
+
       // Calculate performance improvement
       const recentPerformance = historicalPerformance.slice(-5);
       const olderPerformance = historicalPerformance.slice(-10, -5);
-      
+
       const recentAvg = this.calculateAveragePerformance(recentPerformance);
       const olderAvg = this.calculateAveragePerformance(olderPerformance);
-      
+
       const improvement = (recentAvg - olderAvg) / olderAvg;
-      
+
       // Check if improvement exceeds threshold
       if (improvement > this.learningConfig.strategyUpdateThreshold) {
         // Optimize strategy
@@ -393,15 +394,15 @@ export class LearningLoopService {
           performance,
           historicalPerformance
         );
-        
+
         // Store strategy update
         await this.storeStrategyUpdate(userId, agentType, optimizedStrategy);
-        
-        console.log(`Strategy updated for ${agentType} agent: ${improvement * 100}% improvement`);
+
+        logger.info(`Strategy updated for ${agentType} agent: ${improvement * 100}% improvement`);
       }
-      
+
     } catch (error) {
-      console.error('Strategy update check failed:', error);
+      logger.error('Strategy update check failed:', error);
     }
   }
 
@@ -410,26 +411,26 @@ export class LearningLoopService {
    * @param {string} userId - User ID
    */
   startLearningLoop(userId) {
-    const learningInterval = setInterval(async () => {
+    const learningInterval = setInterval(async() => {
       try {
         if (!this.learningConfig.learningEnabled) {
           return;
         }
-        
+
         // Update learning data
         await this.updateLearningData(userId);
-        
+
         // Process feedback
         await this.processFeedback(userId);
-        
+
         // Update models
         await this.updateAllModels(userId);
-        
+
         // Clean up old data
         await this.cleanupOldData(userId);
-        
+
       } catch (error) {
-        console.error(`Learning loop failed for user ${userId}:`, error);
+        logger.error(`Learning loop failed for user ${userId}:`, error);
       }
     }, this.learningConfig.updateFrequency);
   }
@@ -450,12 +451,12 @@ export class LearningLoopService {
   async processFeedback(userId) {
     try {
       const feedback = await this.feedbackProcessor.getFeedback(userId);
-      
+
       if (feedback.length > 0) {
         await this.feedbackProcessor.processFeedback(userId, feedback);
       }
     } catch (error) {
-      console.error('Feedback processing failed:', error);
+      logger.error('Feedback processing failed:', error);
     }
   }
 
@@ -465,11 +466,11 @@ export class LearningLoopService {
    */
   async updateAllModels(userId) {
     const agentTypes = ['portfolio', 'trading', 'compliance', 'yield'];
-    
+
     for (const agentType of agentTypes) {
       try {
         const recentData = await this.getRecentLearningData(userId, agentType);
-        
+
         if (recentData.length >= this.learningConfig.batchSize) {
           await this.rlEngine.updateModel(userId, agentType, recentData, {
             learningRate: this.learningConfig.learningRate,
@@ -477,7 +478,7 @@ export class LearningLoopService {
           });
         }
       } catch (error) {
-        console.error(`Model update failed for ${agentType}:`, error);
+        logger.error(`Model update failed for ${agentType}:`, error);
       }
     }
   }
@@ -489,7 +490,7 @@ export class LearningLoopService {
   async cleanupOldData(userId) {
     const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
     const cutoffTime = new Date(Date.now() - maxAge);
-    
+
     // Clean up learning data
     if (this.learningData.has(userId)) {
       const userData = this.learningData.get(userId);
@@ -497,7 +498,7 @@ export class LearningLoopService {
         userData[agentType] = data.filter(entry => entry.timestamp > cutoffTime);
       }
     }
-    
+
     // Clean up performance history
     if (this.performanceHistory.has(userId)) {
       const userHistory = this.performanceHistory.get(userId);
@@ -522,10 +523,10 @@ export class LearningLoopService {
         yield: []
       });
     }
-    
+
     const userData = this.learningData.get(userId);
     userData[agentType].push(data);
-    
+
     // Keep only recent data
     if (userData[agentType].length > this.learningConfig.maxMemorySize) {
       userData[agentType] = userData[agentType].slice(-this.learningConfig.maxMemorySize);
@@ -564,14 +565,14 @@ export class LearningLoopService {
     if (!this.rewardHistory.has(agentType)) {
       this.rewardHistory.set(agentType, []);
     }
-    
+
     const history = this.rewardHistory.get(agentType);
     history.push({
       reward: reward,
       performance: performance,
       timestamp: new Date()
     });
-    
+
     // Keep only recent data
     if (history.length > 1000) {
       history.splice(0, history.length - 1000);
@@ -593,13 +594,13 @@ export class LearningLoopService {
         yield: []
       });
     }
-    
+
     const userHistory = this.performanceHistory.get(userId);
     userHistory[agentType].push({
       performance: performance,
       timestamp: new Date()
     });
-    
+
     // Keep only recent data
     if (userHistory[agentType].length > 1000) {
       userHistory[agentType] = userHistory[agentType].slice(-1000);
@@ -624,11 +625,11 @@ export class LearningLoopService {
    */
   calculateAveragePerformance(performanceHistory) {
     if (performanceHistory.length === 0) return 0;
-    
+
     const total = performanceHistory.reduce((sum, entry) => {
       return sum + (entry.performance.sharpeRatio || 0);
     }, 0);
-    
+
     return total / performanceHistory.length;
   }
 
@@ -647,7 +648,7 @@ export class LearningLoopService {
         yield: []
       });
     }
-    
+
     const userUpdates = this.strategyUpdates.get(userId);
     userUpdates[agentType].push({
       strategy: strategy,
@@ -664,7 +665,7 @@ export class LearningLoopService {
     const learningData = this.learningData.get(userId) || {};
     const performanceHistory = this.performanceHistory.get(userId) || {};
     const strategyUpdates = this.strategyUpdates.get(userId) || {};
-    
+
     return {
       userId: userId,
       learningEnabled: this.learningConfig.learningEnabled,

@@ -1,0 +1,9 @@
+﻿config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 300
+      arrivalRate: 10  # Ramp to 100 users
+scenarios:
+  - flow:
+    - get:
+        url: '/api/v1/portfolio'

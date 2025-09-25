@@ -1,0 +1,64 @@
+﻿prometheus:
+  prometheusSpec:
+    retention: 30d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    additionalScrapeConfigs:
+      - job_name: 'finnexus-backend'
+        static_configs:
+          - targets: ['finnexus-backend-service:80']
+        metrics_path: '/api/v1/metrics'
+        scrape_interval: 10s
+      - job_name: 'finnexus-frontend'
+        static_configs:
+          - targets: ['finnexus-frontend-service:80']
+        metrics_path: '/api/metrics'
+        scrape_interval: 30s
+
+grafana:
+  adminPassword: "FinNexus2024!"
+  persistence:
+    enabled: true
+    storageClassName: standard
+    size: 10Gi
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+  dashboards:
+    default:
+      kubernetes-cluster-monitoring:
+        gnetId: 7249
+        revision: 1
+        datasource: Prometheus
+      kubernetes-pod-monitoring:
+        gnetId: 6417
+        revision: 1
+        datasource: Prometheus
+
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi

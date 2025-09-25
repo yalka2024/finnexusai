@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finnexus-production
+  labels:
+    name: finnexus-production
+    environment: production
+    app: finnexus-ai
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finnexus-staging
+  labels:
+    name: finnexus-staging
+    environment: staging
+    app: finnexus-ai
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finnexus-monitoring
+  labels:
+    name: finnexus-monitoring
+    environment: monitoring
+    app: finnexus-ai
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finnexus-databases
+  labels:
+    name: finnexus-databases
+    environment: production
+    app: finnexus-ai
+    component: database
+
+
+

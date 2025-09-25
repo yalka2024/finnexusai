@@ -1,0 +1,1019 @@
+openapi: 3.0.0
+info:
+  title: FinNexusAI API
+  description: |
+    FinNexusAI is a comprehensive financial platform that combines traditional finance with cutting-edge AI, blockchain technology, and advanced analytics.
+    
+    ## Features
+    - **AI-Powered Trading**: Advanced machine learning models for market prediction and portfolio optimization
+    - **Multi-Chain DeFi**: Support for Ethereum, Polygon, BSC, Arbitrum, and other blockchain networks
+    - **Real-Time Analytics**: Comprehensive portfolio and market analytics
+    - **Compliance**: Full KYC/AML, PCI DSS, SOC 2, and GDPR compliance
+    - **Enterprise Security**: Quantum-resistant encryption and advanced threat detection
+    
+    ## Authentication
+    Most endpoints require authentication via JWT token in the Authorization header:
+    ```
+    Authorization: Bearer <your_jwt_token>
+    ```
+    
+    ## Rate Limiting
+    - General API: 1000 requests per 15 minutes
+    - Authentication endpoints: 5 requests per 15 minutes
+    
+    ## Support
+    For API support, contact: api-support@finnexusai.com
+  version: 1.0.0
+  contact:
+    name: FinNexusAI API Support
+    email: api-support@finnexusai.com
+    url: https://finnexusai.com/support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://api.finnexusai.com/api
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Health Check
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check endpoint
+      description: Returns the health status of the system and all services
+      security: []
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: UP
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                    example: 3600.5
+                  memory:
+                    type: object
+                    properties:
+                      rss:
+                        type: number
+                      heapTotal:
+                        type: number
+                      heapUsed:
+                        type: number
+                      external:
+                        type: number
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: UP
+                      trading:
+                        type: string
+                        example: UP
+                      marketData:
+                        type: string
+                        example: UP
+                      ai:
+                        type: string
+                        example: UP
+                      blockchain:
+                        type: string
+                        example: UP
+                      payments:
+                        type: string
+                        example: UP
+        '503':
+          description: System is down
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Authentication
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account with email verification
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - firstName
+                - lastName
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  minLength: 8
+                  example: SecurePassword123!
+                firstName:
+                  type: string
+                  example: John
+                lastName:
+                  type: string
+                  example: Doe
+                dateOfBirth:
+                  type: string
+                  format: date
+                  example: "1990-01-01"
+                phoneNumber:
+                  type: string
+                  example: "+1234567890"
+                country:
+                  type: string
+                  example: "US"
+                referralCode:
+                  type: string
+                  example: "REF123"
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User registered successfully. Please check your email for verification.
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: integer
+                        example: 123
+                      email:
+                        type: string
+                        example: user@example.com
+                      verificationRequired:
+                        type: boolean
+                        example: true
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and return JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  example: SecurePassword123!
+                rememberMe:
+                  type: boolean
+                  example: false
+                twoFactorCode:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Login successful
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      tokens:
+                        type: object
+                        properties:
+                          accessToken:
+                            type: string
+                            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                          refreshToken:
+                            type: string
+                            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                          expiresIn:
+                            type: string
+                            example: "15m"
+                      twoFactorRequired:
+                        type: boolean
+                        example: false
+        '400':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Portfolio Management
+  /portfolio:
+    get:
+      tags:
+        - Portfolio
+      summary: Get user portfolios
+      description: Retrieve all portfolios for the authenticated user
+      responses:
+        '200':
+          description: Portfolios retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      portfolios:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Portfolio'
+                      summary:
+                        type: object
+                        properties:
+                          totalValue:
+                            type: number
+                            example: 50000.00
+                          totalCost:
+                            type: number
+                            example: 45000.00
+                          totalProfit:
+                            type: number
+                            example: 5000.00
+                          totalReturn:
+                            type: number
+                            example: 11.11
+                          portfolioCount:
+                            type: integer
+                            example: 3
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Portfolio
+      summary: Create a new portfolio
+      description: Create a new portfolio for the authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: "My Investment Portfolio"
+                description:
+                  type: string
+                  example: "Long-term investment portfolio"
+                strategy:
+                  type: string
+                  enum: [conservative, moderate, aggressive, custom]
+                  example: "moderate"
+                riskTolerance:
+                  type: string
+                  enum: [low, medium, high]
+                  example: "medium"
+      responses:
+        '201':
+          description: Portfolio created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Portfolio created successfully
+                  data:
+                    $ref: '#/components/schemas/Portfolio'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Trading
+  /trading/orders:
+    get:
+      tags:
+        - Trading
+      summary: Get trading orders
+      description: Retrieve all trading orders for the authenticated user
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, filled, cancelled, rejected]
+          description: Filter by order status
+        - in: query
+          name: assetType
+          schema:
+            type: string
+            enum: [crypto, stock, forex, commodity]
+          description: Filter by asset type
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of orders to return
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Number of orders to skip
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      orders:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Trading
+      summary: Create a trading order
+      description: Place a new trading order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - assetSymbol
+                - orderType
+                - quantity
+                - orderSide
+              properties:
+                assetSymbol:
+                  type: string
+                  example: "BTC"
+                assetType:
+                  type: string
+                  enum: [crypto, stock, forex, commodity]
+                  example: "crypto"
+                orderType:
+                  type: string
+                  enum: [market, limit, stop, stop_limit]
+                  example: "limit"
+                orderSide:
+                  type: string
+                  enum: [buy, sell]
+                  example: "buy"
+                quantity:
+                  type: number
+                  example: 0.5
+                price:
+                  type: number
+                  example: 45000.00
+                stopPrice:
+                  type: number
+                  example: 44000.00
+                timeInForce:
+                  type: string
+                  enum: [GTC, IOC, FOK]
+                  example: "GTC"
+                portfolioId:
+                  type: integer
+                  example: 1
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Order placed successfully
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '400':
+          description: Invalid order data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # AI/ML Features
+  /ai/predictions:
+    get:
+      tags:
+        - AI/ML
+      summary: Get AI predictions
+      description: Retrieve AI-generated market predictions
+      parameters:
+        - in: query
+          name: assetSymbol
+          schema:
+            type: string
+          description: Asset symbol to predict
+        - in: query
+          name: timeframe
+          schema:
+            type: string
+            enum: [1h, 4h, 1d, 1w, 1m]
+            default: 1d
+          description: Prediction timeframe
+        - in: query
+          name: modelType
+          schema:
+            type: string
+            enum: [lstm, transformer, ensemble]
+            default: ensemble
+          description: AI model type
+      responses:
+        '200':
+          description: Predictions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      predictions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Prediction'
+                      modelInfo:
+                        type: object
+                        properties:
+                          modelType:
+                            type: string
+                            example: "ensemble"
+                          accuracy:
+                            type: number
+                            example: 0.85
+                          lastUpdated:
+                            type: string
+                            format: date-time
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Blockchain
+  /blockchain/balance:
+    get:
+      tags:
+        - Blockchain
+      summary: Get blockchain balances
+      description: Retrieve cryptocurrency balances across multiple networks
+      parameters:
+        - in: query
+          name: network
+          schema:
+            type: string
+            enum: [ethereum, polygon, bsc, arbitrum]
+          description: Blockchain network
+        - in: query
+          name: walletAddress
+          schema:
+            type: string
+          description: Wallet address to check
+      responses:
+        '200':
+          description: Balances retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      balances:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TokenBalance'
+                      totalValueUSD:
+                        type: number
+                        example: 15000.00
+                      network:
+                        type: string
+                        example: "ethereum"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Analytics
+  /analytics/portfolio/performance:
+    get:
+      tags:
+        - Analytics
+      summary: Get portfolio performance analytics
+      description: Retrieve comprehensive portfolio performance metrics
+      parameters:
+        - in: query
+          name: period
+          schema:
+            type: string
+            enum: [1d, 7d, 30d, 90d, 1y, all]
+            default: 30d
+          description: Analysis period
+        - in: query
+          name: portfolioId
+          schema:
+            type: integer
+          description: Specific portfolio ID
+      responses:
+        '200':
+          description: Performance analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/PerformanceAnalytics'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Compliance
+  /compliance/kyc/verify:
+    post:
+      tags:
+        - Compliance
+      summary: Perform KYC verification
+      description: Submit documents for KYC verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - documents
+              properties:
+                documents:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: [passport, drivers_license, utility_bill, bank_statement]
+                      data:
+                        type: string
+                        description: Base64 encoded document data
+                      metadata:
+                        type: object
+      responses:
+        '200':
+          description: KYC verification initiated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: KYC verification initiated
+                  data:
+                    type: object
+                    properties:
+                      kycId:
+                        type: string
+                        example: "kyc_123456"
+                      status:
+                        type: string
+                        example: "pending"
+        '400':
+          description: Invalid document data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: Doe
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+          example: active
+        kycStatus:
+          type: string
+          enum: [not_verified, pending, verified, rejected]
+          example: verified
+        emailVerified:
+          type: boolean
+          example: true
+        twoFactorEnabled:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        lastLogin:
+          type: string
+          format: date-time
+
+    Portfolio:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "My Investment Portfolio"
+        description:
+          type: string
+          example: "Long-term investment portfolio"
+        strategy:
+          type: string
+          enum: [conservative, moderate, aggressive, custom]
+          example: moderate
+        riskTolerance:
+          type: string
+          enum: [low, medium, high]
+          example: medium
+        totalValue:
+          type: number
+          example: 50000.00
+        totalCost:
+          type: number
+          example: 45000.00
+        totalProfit:
+          type: number
+          example: 5000.00
+        totalReturn:
+          type: number
+          example: 11.11
+        assetCount:
+          type: integer
+          example: 5
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "order_123456"
+        assetSymbol:
+          type: string
+          example: "BTC"
+        assetType:
+          type: string
+          enum: [crypto, stock, forex, commodity]
+          example: crypto
+        orderType:
+          type: string
+          enum: [market, limit, stop, stop_limit]
+          example: limit
+        orderSide:
+          type: string
+          enum: [buy, sell]
+          example: buy
+        quantity:
+          type: number
+          example: 0.5
+        price:
+          type: number
+          example: 45000.00
+        stopPrice:
+          type: number
+          example: 44000.00
+        filledQuantity:
+          type: number
+          example: 0.5
+        averagePrice:
+          type: number
+          example: 44950.00
+        status:
+          type: string
+          enum: [pending, partially_filled, filled, cancelled, rejected]
+          example: filled
+        timeInForce:
+          type: string
+          enum: [GTC, IOC, FOK]
+          example: GTC
+        fees:
+          type: number
+          example: 22.50
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Prediction:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "pred_123456"
+        assetSymbol:
+          type: string
+          example: "BTC"
+        timeframe:
+          type: string
+          example: "1d"
+        predictedPrice:
+          type: number
+          example: 47000.00
+        confidence:
+          type: number
+          example: 0.85
+        direction:
+          type: string
+          enum: [up, down, sideways]
+          example: up
+        modelType:
+          type: string
+          example: "ensemble"
+        predictionDate:
+          type: string
+          format: date-time
+        targetDate:
+          type: string
+          format: date-time
+
+    TokenBalance:
+      type: object
+      properties:
+        symbol:
+          type: string
+          example: "ETH"
+        name:
+          type: string
+          example: "Ethereum"
+        balance:
+          type: string
+          example: "1.5"
+        balanceFormatted:
+          type: string
+          example: "1.500000000000000000"
+        decimals:
+          type: integer
+          example: 18
+        priceUSD:
+          type: number
+          example: 3000.00
+        valueUSD:
+          type: number
+          example: 4500.00
+        contractAddress:
+          type: string
+          example: "0x0000000000000000000000000000000000000000"
+
+    PerformanceAnalytics:
+      type: object
+      properties:
+        portfolios:
+          type: array
+          items:
+            $ref: '#/components/schemas/Portfolio'
+        historical:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              avgValue:
+                type: number
+              avgCost:
+                type: number
+              portfolioCount:
+                type: integer
+        summary:
+          type: object
+          properties:
+            totalValue:
+              type: number
+              example: 150000.00
+            totalCost:
+              type: number
+              example: 135000.00
+            totalProfit:
+              type: number
+              example: 15000.00
+            averageReturn:
+              type: number
+              example: 11.11
+            bestPerformer:
+              $ref: '#/components/schemas/Portfolio'
+            worstPerformer:
+              $ref: '#/components/schemas/Portfolio'
+        period:
+          type: string
+          example: "30d"
+        dateRange:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 10
+        totalItems:
+          type: integer
+          example: 100
+        limit:
+          type: integer
+          example: 10
+        hasNext:
+          type: boolean
+          example: true
+        hasPrev:
+          type: boolean
+          example: false
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "An error occurred"
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            details:
+              type: string
+              example: "Invalid input data"
+        timestamp:
+          type: string
+          format: date-time
+

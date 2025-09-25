@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - AR Integration Service
- * 
+ *
  * Provides AR integration for immersive financial lessons:
  * - Avatars appear in AR for immersive lessons
  * - 3D financial visualizations
@@ -23,12 +24,12 @@ export class ARIntegrationService {
     this.spatialAudio = new SpatialAudioManager();
     this.gestureRecognizer = new GestureRecognizer();
     this.voiceProcessor = new VoiceProcessor();
-    
+
     this.arSessions = new Map();
     this.avatarInstances = new Map();
     this.arChallenges = new Map();
     this.multiUserSessions = new Map();
-    
+
     this.arConfig = {
       markerSize: 0.1, // meters
       avatarScale: 1.0,
@@ -52,14 +53,14 @@ export class ARIntegrationService {
     try {
       this.userId = userId;
       this.arConfig = { ...this.arConfig, ...config };
-      
+
       // Initialize components
       await this.arjs.initialize(userId, config.arjs);
       await this.threejs.initialize(userId, config.threejs);
       await this.spatialAudio.initialize(userId, config.spatialAudio);
       await this.gestureRecognizer.initialize(userId, config.gesture);
       await this.voiceProcessor.initialize(userId, config.voice);
-      
+
       return {
         status: 'initialized',
         userId: userId,
@@ -67,7 +68,7 @@ export class ARIntegrationService {
         capabilities: await this.getARCapabilities()
       };
     } catch (error) {
-      console.error('AR integration initialization failed:', error);
+      logger.error('AR integration initialization failed:', error);
       throw new Error('Failed to initialize AR integration service');
     }
   }
@@ -80,7 +81,7 @@ export class ARIntegrationService {
   async createAvatarAR(avatar) {
     try {
       const arAvatarId = this.generateARAvatarId();
-      
+
       // Create 3D avatar model
       const avatarModel = await this.threejs.createAvatarModel({
         id: arAvatarId,
@@ -89,7 +90,7 @@ export class ARIntegrationService {
         personality: avatar.personality,
         scale: this.arConfig.avatarScale
       });
-      
+
       // Create AR marker for avatar
       const marker = await this.arjs.createMarker({
         id: `avatar_${arAvatarId}`,
@@ -98,7 +99,7 @@ export class ARIntegrationService {
         position: { x: 0, y: 0, z: 0 },
         rotation: { x: 0, y: 0, z: 0 }
       });
-      
+
       // Create AR avatar instance
       const arAvatar = {
         id: arAvatarId,
@@ -114,10 +115,10 @@ export class ARIntegrationService {
         interactions: [],
         createdAt: new Date()
       };
-      
+
       // Store AR avatar
       this.avatarInstances.set(arAvatarId, arAvatar);
-      
+
       return {
         success: true,
         arAvatar: arAvatar,
@@ -125,7 +126,7 @@ export class ARIntegrationService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('AR avatar creation failed:', error);
+      logger.error('AR avatar creation failed:', error);
       throw new Error('Failed to create AR avatar');
     }
   }
@@ -138,7 +139,7 @@ export class ARIntegrationService {
   async createLessonAR(session) {
     try {
       const arLessonId = this.generateARLessonId();
-      
+
       // Create AR session
       const arSession = {
         id: arLessonId,
@@ -155,7 +156,7 @@ export class ARIntegrationService {
         endTime: null,
         createdAt: new Date()
       };
-      
+
       // Create AR challenges
       for (const challenge of session.challenges) {
         if (challenge.arEnabled) {
@@ -163,14 +164,14 @@ export class ARIntegrationService {
           arSession.challenges.push(arChallenge);
         }
       }
-      
+
       // Create 3D visualizations
       const visualizations = await this.createLessonVisualizations(session);
       arSession.visualizations = visualizations;
-      
+
       // Store AR session
       this.arSessions.set(arLessonId, arSession);
-      
+
       return {
         success: true,
         arSession: arSession,
@@ -179,7 +180,7 @@ export class ARIntegrationService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('AR lesson creation failed:', error);
+      logger.error('AR lesson creation failed:', error);
       throw new Error('Failed to create AR lesson');
     }
   }
@@ -196,14 +197,14 @@ export class ARIntegrationService {
       if (!arSession) {
         throw new Error('AR lesson not found');
       }
-      
+
       // Start AR session
       arSession.isActive = true;
       arSession.startTime = new Date();
-      
+
       // Position avatars around user
       await this.positionAvatarsAroundUser(arSession, userPosition);
-      
+
       // Start spatial audio if enabled
       if (this.arConfig.spatialAudioEnabled) {
         await this.spatialAudio.startSession(arLessonId, {
@@ -211,17 +212,17 @@ export class ARIntegrationService {
           avatars: arSession.avatars
         });
       }
-      
+
       // Start gesture recognition if enabled
       if (this.arConfig.gestureEnabled) {
         await this.gestureRecognizer.startRecognition(arLessonId);
       }
-      
+
       // Start voice processing if enabled
       if (this.arConfig.voiceEnabled) {
         await this.voiceProcessor.startProcessing(arLessonId);
       }
-      
+
       return {
         success: true,
         arSession: arSession,
@@ -232,7 +233,7 @@ export class ARIntegrationService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('AR lesson start failed:', error);
+      logger.error('AR lesson start failed:', error);
       throw new Error('Failed to start AR lesson');
     }
   }
@@ -249,41 +250,41 @@ export class ARIntegrationService {
       if (!arSession) {
         throw new Error('AR lesson not found');
       }
-      
+
       // Process interaction based on type
       let result = null;
-      
+
       switch (interaction.type) {
-        case 'voice':
-          result = await this.processVoiceInteraction(arSession, interaction);
-          break;
-        case 'gesture':
-          result = await this.processGestureInteraction(arSession, interaction);
-          break;
-        case 'touch':
-          result = await this.processTouchInteraction(arSession, interaction);
-          break;
-        case 'gaze':
-          result = await this.processGazeInteraction(arSession, interaction);
-          break;
-        default:
-          throw new Error(`Unknown interaction type: ${interaction.type}`);
+      case 'voice':
+        result = await this.processVoiceInteraction(arSession, interaction);
+        break;
+      case 'gesture':
+        result = await this.processGestureInteraction(arSession, interaction);
+        break;
+      case 'touch':
+        result = await this.processTouchInteraction(arSession, interaction);
+        break;
+      case 'gaze':
+        result = await this.processGazeInteraction(arSession, interaction);
+        break;
+      default:
+        throw new Error(`Unknown interaction type: ${interaction.type}`);
       }
-      
+
       // Store interaction
       arSession.interactions.push({
         interaction: interaction,
         result: result,
         timestamp: new Date()
       });
-      
+
       return {
         success: true,
         result: result,
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('AR interaction processing failed:', error);
+      logger.error('AR interaction processing failed:', error);
       throw new Error('Failed to process AR interaction');
     }
   }
@@ -296,7 +297,7 @@ export class ARIntegrationService {
    */
   async createARChallenge(challenge, arSession) {
     const arChallengeId = this.generateARChallengeId();
-    
+
     // Create 3D challenge environment
     const challengeEnvironment = await this.threejs.createChallengeEnvironment({
       id: arChallengeId,
@@ -306,10 +307,10 @@ export class ARIntegrationService {
       position: this.calculateChallengePosition(arSession.challenges.length),
       scale: 1.0
     });
-    
+
     // Create interactive elements
     const interactiveElements = await this.createInteractiveElements(challenge);
-    
+
     // Create AR challenge
     const arChallenge = {
       id: arChallengeId,
@@ -322,10 +323,10 @@ export class ARIntegrationService {
       progress: 0,
       interactions: []
     };
-    
+
     // Store AR challenge
     this.arChallenges.set(arChallengeId, arChallenge);
-    
+
     return arChallenge;
   }
 
@@ -336,28 +337,28 @@ export class ARIntegrationService {
    */
   async createLessonVisualizations(session) {
     const visualizations = [];
-    
+
     // Create topic-specific visualizations
     switch (session.topic) {
-      case 'budgeting':
-        visualizations.push(await this.createBudgetingVisualization(session));
-        break;
-      case 'investing':
-        visualizations.push(await this.createInvestingVisualization(session));
-        break;
-      case 'trading':
-        visualizations.push(await this.createTradingVisualization(session));
-        break;
-      case 'compliance':
-        visualizations.push(await this.createComplianceVisualization(session));
-        break;
-      case 'islamic_finance':
-        visualizations.push(await this.createIslamicFinanceVisualization(session));
-        break;
-      default:
-        visualizations.push(await this.createGenericVisualization(session));
+    case 'budgeting':
+      visualizations.push(await this.createBudgetingVisualization(session));
+      break;
+    case 'investing':
+      visualizations.push(await this.createInvestingVisualization(session));
+      break;
+    case 'trading':
+      visualizations.push(await this.createTradingVisualization(session));
+      break;
+    case 'compliance':
+      visualizations.push(await this.createComplianceVisualization(session));
+      break;
+    case 'islamic_finance':
+      visualizations.push(await this.createIslamicFinanceVisualization(session));
+      break;
+    default:
+      visualizations.push(await this.createGenericVisualization(session));
     }
-    
+
     return visualizations;
   }
 
@@ -571,7 +572,7 @@ export class ARIntegrationService {
   async positionAvatarsAroundUser(arSession, userPosition) {
     const avatarCount = Math.min(arSession.avatars.length, this.arConfig.maxAvatarsPerSession);
     const radius = 2.0; // meters
-    
+
     for (let i = 0; i < avatarCount; i++) {
       const angle = (i / avatarCount) * 2 * Math.PI;
       const position = {
@@ -579,7 +580,7 @@ export class ARIntegrationService {
         y: userPosition.y,
         z: userPosition.z + radius * Math.sin(angle)
       };
-      
+
       const avatar = arSession.avatars[i];
       avatar.position = position;
       avatar.isVisible = true;
@@ -596,13 +597,13 @@ export class ARIntegrationService {
   async processVoiceInteraction(arSession, interaction) {
     // Process voice command through voice processor
     const voiceResult = await this.voiceProcessor.processCommand(interaction.command);
-    
+
     // Find nearest avatar
     const nearestAvatar = this.findNearestAvatar(arSession, interaction.position);
-    
+
     // Generate avatar response
     const avatarResponse = await this.generateAvatarResponse(nearestAvatar, voiceResult);
-    
+
     return {
       type: 'voice',
       command: interaction.command,
@@ -621,13 +622,13 @@ export class ARIntegrationService {
   async processGestureInteraction(arSession, interaction) {
     // Process gesture through gesture recognizer
     const gestureResult = await this.gestureRecognizer.processGesture(interaction.gesture);
-    
+
     // Find target based on gesture
     const target = this.findGestureTarget(arSession, interaction);
-    
+
     // Execute gesture action
     const actionResult = await this.executeGestureAction(target, gestureResult);
-    
+
     return {
       type: 'gesture',
       gesture: interaction.gesture,
@@ -647,11 +648,11 @@ export class ARIntegrationService {
   async processTouchInteraction(arSession, interaction) {
     // Find touched object
     const touchedObject = this.findTouchedObject(arSession, interaction.position);
-    
+
     if (touchedObject) {
       // Execute touch action
       const actionResult = await this.executeTouchAction(touchedObject, interaction);
-      
+
       return {
         type: 'touch',
         position: interaction.position,
@@ -660,7 +661,7 @@ export class ARIntegrationService {
         timestamp: new Date()
       };
     }
-    
+
     return {
       type: 'touch',
       position: interaction.position,
@@ -679,11 +680,11 @@ export class ARIntegrationService {
   async processGazeInteraction(arSession, interaction) {
     // Find gazed object
     const gazedObject = this.findGazedObject(arSession, interaction.direction);
-    
+
     if (gazedObject) {
       // Execute gaze action
       const actionResult = await this.executeGazeAction(gazedObject, interaction);
-      
+
       return {
         type: 'gaze',
         direction: interaction.direction,
@@ -692,7 +693,7 @@ export class ARIntegrationService {
         timestamp: new Date()
       };
     }
-    
+
     return {
       type: 'gaze',
       direction: interaction.direction,
@@ -709,27 +710,27 @@ export class ARIntegrationService {
    */
   async createInteractiveElements(challenge) {
     const elements = [];
-    
+
     switch (challenge.type) {
-      case 'quiz':
-        elements.push(await this.createQuizElements(challenge));
-        break;
-      case 'simulation':
-        elements.push(await this.createSimulationElements(challenge));
-        break;
-      case 'calculation':
-        elements.push(await this.createCalculationElements(challenge));
-        break;
-      case 'analysis':
-        elements.push(await this.createAnalysisElements(challenge));
-        break;
-      case 'portfolio':
-        elements.push(await this.createPortfolioElements(challenge));
-        break;
-      default:
-        elements.push(await this.createGenericElements(challenge));
+    case 'quiz':
+      elements.push(await this.createQuizElements(challenge));
+      break;
+    case 'simulation':
+      elements.push(await this.createSimulationElements(challenge));
+      break;
+    case 'calculation':
+      elements.push(await this.createCalculationElements(challenge));
+      break;
+    case 'analysis':
+      elements.push(await this.createAnalysisElements(challenge));
+      break;
+    case 'portfolio':
+      elements.push(await this.createPortfolioElements(challenge));
+      break;
+    default:
+      elements.push(await this.createGenericElements(challenge));
     }
-    
+
     return elements;
   }
 
@@ -922,7 +923,7 @@ export class ARIntegrationService {
   findNearestAvatar(arSession, position) {
     let nearestAvatar = null;
     let minDistance = Infinity;
-    
+
     for (const avatar of arSession.avatars) {
       const distance = this.calculateDistance(position, avatar.position);
       if (distance < minDistance) {
@@ -930,7 +931,7 @@ export class ARIntegrationService {
         nearestAvatar = avatar;
       }
     }
-    
+
     return nearestAvatar;
   }
 

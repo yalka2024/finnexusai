@@ -1,0 +1,62 @@
+openapi: 3.0.0
+info:
+  title: FinAI Nexus API
+  description: Enterprise-grade financial AI platform
+  version: 1.0.0
+  contact:
+    name: FinAI Nexus Team
+    email: support@finainexus.com
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.finainexus.com
+    description: Production server
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the API
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+  /api/status:
+    get:
+      summary: API status
+      description: Returns detailed API status information
+      responses:
+        '200':
+          description: API status information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                  environment:
+                    type: string
+                  uptime:
+                    type: number
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time

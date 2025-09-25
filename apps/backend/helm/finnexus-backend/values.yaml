@@ -1,0 +1,516 @@
+# FinNexusAI Backend Helm Chart Values
+# This file contains the default values for the FinNexusAI backend application
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Application configuration
+app:
+  name: finnexus-backend
+  version: "1.0.0"
+  environment: "production"
+  namespace: "finnexus-production"
+
+# Image configuration
+image:
+  registry: docker.io
+  repository: finnexusai/backend
+  tag: "1.0.0"
+  pullPolicy: Always
+  pullSecrets: []
+
+# Service configuration
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 3000
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+  hosts:
+    - host: api.finnexusai.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: finnexus-backend-tls
+      hosts:
+        - api.finnexusai.com
+
+# Blue-Green Deployment configuration
+blueGreen:
+  enabled: true
+  strategy:
+    type: "blueGreen"
+    blueGreen:
+      activeService: "finnexus-backend-active"
+      previewService: "finnexus-backend-preview"
+      autoPromotionEnabled: false
+      scaleDownDelaySeconds: 30
+      prePromotionAnalysis:
+        templates:
+          - templateName: success-rate
+        args:
+          - name: service-name
+            value: finnexus-backend-preview
+      postPromotionAnalysis:
+        templates:
+          - templateName: success-rate
+        args:
+          - name: service-name
+            value: finnexus-backend-active
+
+# Deployment configuration
+deployment:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+      ephemeral-storage: "1Gi"
+    requests:
+      cpu: "1000m"
+      memory: "1Gi"
+      ephemeral-storage: "500Mi"
+  
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /api/v1/health
+      port: 3000
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+    successThreshold: 1
+  
+  readinessProbe:
+    httpGet:
+      path: /api/v1/health/ready
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  
+  startupProbe:
+    httpGet:
+      path: /api/v1/health/startup
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+    successThreshold: 1
+  
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  
+  # Container security context
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    capabilities:
+      drop:
+        - ALL
+      add:
+        - NET_BIND_SERVICE
+    seccompProfile:
+      type: RuntimeDefault
+  
+  # Lifecycle hooks
+  lifecycle:
+    preStop:
+      exec:
+        command: ["/bin/sh", "-c", "sleep 15"]
+
+# Horizontal Pod Autoscaler configuration
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+      selectPolicy: Max
+
+# Pod Disruption Budget configuration
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Network Policy configuration
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: finnexus-production
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: finnexus-production
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 27017
+        - protocol: TCP
+          port: 6379
+        - protocol: TCP
+          port: 9090
+        - protocol: TCP
+          port: 9200
+        - protocol: TCP
+          port: 5601
+
+# Environment variables
+env:
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  ENABLE_MONITORING: "true"
+  ENABLE_TRACING: "true"
+  ENABLE_HEALTH_CHECKS: "true"
+  ENABLE_RESOURCE_MONITORING: "true"
+  ENABLE_SECURITY_HEADERS: "true"
+  ENABLE_RATE_LIMITING: "true"
+  ENABLE_INPUT_SANITIZATION: "true"
+  ENABLE_API_VERSIONING: "true"
+  ENABLE_DATABASE_ENCRYPTION: "true"
+  ENABLE_DATABASE_REPLICATION: "true"
+  ENABLE_BACKUP_MANAGEMENT: "true"
+  ENABLE_SSL_MANAGEMENT: "true"
+  ENABLE_SECRETS_MANAGEMENT: "true"
+  ENABLE_CIRCUIT_BREAKER: "true"
+  ENABLE_GRACEFUL_SHUTDOWN: "true"
+  ENABLE_RESOURCE_LIMITS: "true"
+  ENABLE_BLUE_GREEN_DEPLOYMENT: "true"
+
+# Secrets configuration
+secrets:
+  DATABASE_URL: ""
+  MONGO_URI: ""
+  REDIS_URL: ""
+  JWT_SECRET: ""
+  ENCRYPTION_KEY: ""
+  API_KEY_SECRET: ""
+  SSL_CERT: ""
+  SSL_KEY: ""
+
+# ConfigMap configuration
+configMap:
+  enabled: true
+  data:
+    NODE_ENV: "production"
+    PORT: "3000"
+    LOG_LEVEL: "info"
+
+# Service Account configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# RBAC configuration
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "services", "configmaps", "secrets"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["apps"]
+      resources: ["deployments", "replicasets"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["argoproj.io"]
+      resources: ["rollouts"]
+      verbs: ["get", "list", "watch", "update", "patch"]
+
+# Node selection and affinity
+nodeSelector: {}
+tolerations: []
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - finnexus-backend
+          topologyKey: kubernetes.io/hostname
+
+# Volumes configuration
+volumes:
+  logs:
+    size: 1Gi
+    storageClass: ""
+  uploads:
+    size: 2Gi
+    storageClass: ""
+  tmp:
+    size: 100Mi
+    storageClass: ""
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "postgres"
+    username: "finnexus"
+    password: "finnexus"
+    database: "fin_nexus_ai"
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: ""
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+    service:
+      type: ClusterIP
+      port: 5432
+
+# MongoDB configuration
+mongodb:
+  enabled: true
+  auth:
+    enabled: true
+    rootUsername: "finnexus"
+    rootPassword: "finnexus"
+    username: "finnexus"
+    password: "finnexus"
+    database: "finnexusai"
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: ""
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+    service:
+      type: ClusterIP
+      port: 27017
+
+# Redis configuration
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "redis"
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: ""
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+    service:
+      type: ClusterIP
+      port: 6379
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+      labels: {}
+  grafana:
+    enabled: true
+    adminPassword: "admin"
+    persistence:
+      enabled: true
+      size: 1Gi
+    service:
+      type: ClusterIP
+      port: 3000
+  jaeger:
+    enabled: true
+    collector:
+      resources:
+        limits:
+          cpu: "1000m"
+          memory: "1Gi"
+        requests:
+          cpu: "500m"
+          memory: "512Mi"
+    query:
+      resources:
+        limits:
+          cpu: "1000m"
+          memory: "1Gi"
+        requests:
+          cpu: "500m"
+          memory: "512Mi"
+    service:
+      type: ClusterIP
+      port: 16686
+
+# Logging configuration
+logging:
+  enabled: true
+  elasticsearch:
+    enabled: true
+    master:
+      persistence:
+        enabled: true
+        size: 30Gi
+      resources:
+        limits:
+          cpu: "2000m"
+          memory: "4Gi"
+        requests:
+          cpu: "1000m"
+          memory: "2Gi"
+    service:
+      type: ClusterIP
+      port: 9200
+  kibana:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 1Gi
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "2Gi"
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+    service:
+      type: ClusterIP
+      port: 5601
+
+# Backup configuration
+backup:
+  enabled: true
+  schedule: "0 2 * * *" # Daily at 2 AM
+  retention: "30d"
+  storage:
+    type: "s3"
+    bucket: "finnexus-backups"
+    region: "us-east-1"
+
+# Security configuration
+security:
+  enabled: true
+  podSecurityPolicy:
+    enabled: true
+  networkPolicy:
+    enabled: true
+  serviceAccount:
+    create: true
+  rbac:
+    create: true
+
+# Testing configuration
+testing:
+  enabled: false
+  image:
+    repository: finnexusai/backend-test
+    tag: "1.0.0"
+    pullPolicy: Always
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+
+# Development configuration
+development:
+  enabled: false
+  debug: false
+  hotReload: false
+  devTools: false
+
+# Production configuration
+production:
+  enabled: true
+  optimization: true
+  compression: true
+  caching: true
+  cdn: true

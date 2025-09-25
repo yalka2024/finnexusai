@@ -1,0 +1,336 @@
+{
+  "name": "FinNexusAI Trading Platform",
+  "short_name": "FinNexusAI",
+  "description": "Advanced AI-powered trading platform with offline capabilities",
+  "version": "1.0.0",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1e1e1e",
+  "background_color": "#1e1e1e",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["finance", "business", "productivity"],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop Trading Dashboard"
+    },
+    {
+      "src": "/screenshots/mobile-1.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile Trading Interface"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Quick Trade",
+      "short_name": "Trade",
+      "description": "Execute a quick trade",
+      "url": "/trading",
+      "icons": [
+        {
+          "src": "/icons/trade-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Portfolio",
+      "short_name": "Portfolio",
+      "description": "View your portfolio",
+      "url": "/portfolio",
+      "icons": [
+        {
+          "src": "/icons/portfolio-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Market Data",
+      "short_name": "Market",
+      "description": "View market data",
+      "url": "/market",
+      "icons": [
+        {
+          "src": "/icons/market-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "AI Insights",
+      "short_name": "AI",
+      "description": "View AI insights",
+      "url": "/ai-insights",
+      "icons": [
+        {
+          "src": "/icons/ai-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.finnexusai.mobile",
+      "id": "com.finnexusai.mobile"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/finnexusai/id123456789"
+    }
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+finnexusai",
+      "url": "/?action=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/import",
+      "accept": {
+        "application/json": [".json"],
+        "text/csv": [".csv"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "file",
+          "accept": ["image/*", "application/pdf", "text/csv"]
+        }
+      ]
+    }
+  },
+  "handle_links": "preferred",
+  "capture_links": "new-client",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "window_controls_overlay": {
+    "enabled": true,
+    "title": "FinNexusAI Trading",
+    "color": "#1e1e1e"
+  },
+  "features": [
+    "Cross Platform",
+    "fast",
+    "simple"
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "id": "finnexusai-trading-platform",
+  "scope_extensions": [
+    {
+      "origin": "https://api.finnexusai.com"
+    }
+  ],
+  "offline_enabled": true,
+  "permissions": [
+    "notifications",
+    "persistent-storage",
+    "background-sync",
+    "background-fetch",
+    "periodic-background-sync"
+  ],
+  "background_sync": {
+    "enabled": true,
+    "max_sync_attempts": 3,
+    "sync_interval": 30000
+  },
+  "periodic_background_sync": {
+    "enabled": true,
+    "min_interval": 300000,
+    "max_interval": 86400000
+  },
+  "background_fetch": {
+    "enabled": true,
+    "max_fetch_attempts": 3
+  },
+  "cache_strategy": {
+    "static_assets": "cache_first",
+    "api_responses": "network_first",
+    "trading_data": "network_first",
+    "market_data": "stale_while_revalidate"
+  },
+  "offline_pages": [
+    "/offline",
+    "/maintenance"
+  ],
+  "update_prompt": {
+    "enabled": true,
+    "show_after_days": 7,
+    "auto_update": true
+  },
+  "analytics": {
+    "enabled": true,
+    "track_install": true,
+    "track_engagement": true,
+    "track_performance": true
+  },
+  "security": {
+    "content_security_policy": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.finnexusai.com wss://api.finnexusai.com;",
+    "referrer_policy": "strict-origin-when-cross-origin",
+    "permissions_policy": "camera=(), microphone=(), geolocation=()"
+  },
+  "performance": {
+    "lazy_loading": true,
+    "preload_critical": true,
+    "optimize_images": true,
+    "minify_resources": true
+  },
+  "accessibility": {
+    "screen_reader_support": true,
+    "keyboard_navigation": true,
+    "high_contrast_mode": true,
+    "font_scaling": true
+  },
+  "localization": {
+    "supported_languages": [
+      "en",
+      "es",
+      "fr",
+      "de",
+      "it",
+      "pt",
+      "ru",
+      "zh",
+      "ja",
+      "ko",
+      "ar"
+    ],
+    "default_language": "en",
+    "rtl_support": true
+  },
+  "trading_features": {
+    "offline_trading": true,
+    "real_time_updates": true,
+    "ai_insights": true,
+    "portfolio_management": true,
+    "risk_management": true,
+    "multi_asset_support": true,
+    "cross_platform_sync": true
+  },
+  "compliance": {
+    "gdpr_compliant": true,
+    "ccpa_compliant": true,
+    "sox_compliant": true,
+    "pci_dss_compliant": true,
+    "data_encryption": true,
+    "audit_trail": true
+  },
+  "integration": {
+    "web3_wallets": true,
+    "decentralized_exchanges": true,
+    "centralized_exchanges": true,
+    "defi_protocols": true,
+    "nft_marketplaces": true,
+    "payment_processors": true
+  },
+  "ai_capabilities": {
+    "price_prediction": true,
+    "sentiment_analysis": true,
+    "risk_assessment": true,
+    "portfolio_optimization": true,
+    "fraud_detection": true,
+    "market_analysis": true,
+    "trading_signals": true
+  },
+  "blockchain_support": {
+    "ethereum": true,
+    "polygon": true,
+    "binance_smart_chain": true,
+    "arbitrum": true,
+    "optimism": true,
+    "avalanche": true,
+    "solana": true,
+    "cardano": true
+  },
+  "deployment": {
+    "cdn_enabled": true,
+    "edge_caching": true,
+    "global_distribution": true,
+    "auto_scaling": true,
+    "load_balancing": true,
+    "failover_support": true
+  }
+}
+

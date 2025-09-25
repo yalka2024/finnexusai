@@ -10,7 +10,7 @@ class ContractMonitor {
   constructor(config) {
     this.config = config;
     this.contracts = new FinNexusContracts(config.contracts);
-    
+
     // Initialize alerting systems
     this.discordWebhook = config.discord?.webhookUrl ? new WebhookClient({
       url: config.discord.webhookUrl
@@ -48,11 +48,11 @@ class ContractMonitor {
    */
   async startMonitoring() {
     if (this.isMonitoring) {
-      console.log('⚠️ Monitoring already active');
+      logger.info('⚠️ Monitoring already active');
       return;
     }
 
-    console.log('🚀 Starting FinNexus AI contract monitoring...');
+    logger.info('🚀 Starting FinNexus AI contract monitoring...');
     this.isMonitoring = true;
     this.stats.startTime = new Date();
 
@@ -67,7 +67,7 @@ class ContractMonitor {
     // Start gas price monitoring
     this.startGasPriceMonitoring();
 
-    console.log('✅ Contract monitoring started successfully');
+    logger.info('✅ Contract monitoring started successfully');
   }
 
   /**
@@ -75,23 +75,23 @@ class ContractMonitor {
    */
   stopMonitoring() {
     if (!this.isMonitoring) {
-      console.log('⚠️ Monitoring not active');
+      logger.info('⚠️ Monitoring not active');
       return;
     }
 
-    console.log('🛑 Stopping contract monitoring...');
+    logger.info('🛑 Stopping contract monitoring...');
     this.isMonitoring = false;
     this.contracts.stopEventMonitoring();
-    
+
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
     }
-    
+
     if (this.gasPriceInterval) {
       clearInterval(this.gasPriceInterval);
     }
 
-    console.log('✅ Contract monitoring stopped');
+    logger.info('✅ Contract monitoring stopped');
   }
 
   /**
@@ -100,32 +100,32 @@ class ContractMonitor {
   async handleContractEvent(contract, event, data) {
     try {
       this.stats.eventsProcessed++;
-      
-      console.log(`📄 ${contract} ${event}:`, data);
+
+      logger.info(`📄 ${contract} ${event}:`, data);
 
       // Process different event types
       switch (event) {
-        case 'Transfer':
-          await this.handleTransferEvent(contract, data);
-          break;
-        case 'RewardMinted':
-          await this.handleRewardEvent(data);
-          break;
-        case 'YieldOptimized':
-          await this.handleYieldOptimizationEvent(data);
-          break;
-        case 'PortfolioRebalanced':
-          await this.handlePortfolioRebalanceEvent(data);
-          break;
-        case 'EmergencyWithdrawal':
-          await this.handleEmergencyWithdrawalEvent(data);
-          break;
-        default:
-          console.log(`ℹ️ Unhandled event: ${event}`);
+      case 'Transfer':
+        await this.handleTransferEvent(contract, data);
+        break;
+      case 'RewardMinted':
+        await this.handleRewardEvent(data);
+        break;
+      case 'YieldOptimized':
+        await this.handleYieldOptimizationEvent(data);
+        break;
+      case 'PortfolioRebalanced':
+        await this.handlePortfolioRebalanceEvent(data);
+        break;
+      case 'EmergencyWithdrawal':
+        await this.handleEmergencyWithdrawalEvent(data);
+        break;
+      default:
+        logger.info(`ℹ️ Unhandled event: ${event}`);
       }
     } catch (error) {
       this.stats.errors++;
-      console.error('Error handling contract event:', error);
+      logger.error('Error handling contract event:', error);
     }
   }
 
@@ -204,11 +204,11 @@ class ContractMonitor {
    * Start periodic health checks
    */
   startHealthChecks() {
-    this.healthCheckInterval = setInterval(async () => {
+    this.healthCheckInterval = setInterval(async() => {
       try {
         await this.performHealthCheck();
       } catch (error) {
-        console.error('Health check failed:', error);
+        logger.error('Health check failed:', error);
         this.stats.errors++;
       }
     }, 60000); // Check every minute
@@ -248,7 +248,7 @@ class ContractMonitor {
       }
 
     } catch (error) {
-      console.error('Health check error:', error);
+      logger.error('Health check error:', error);
     }
   }
 
@@ -256,7 +256,7 @@ class ContractMonitor {
    * Start gas price monitoring
    */
   startGasPriceMonitoring() {
-    this.gasPriceInterval = setInterval(async () => {
+    this.gasPriceInterval = setInterval(async() => {
       try {
         const gasPrice = await this.contracts.getGasPrice();
         const threshold = parseFloat(this.alertThresholds.highGasPrice);
@@ -269,7 +269,7 @@ class ContractMonitor {
           });
         }
       } catch (error) {
-        console.error('Gas price monitoring error:', error);
+        logger.error('Gas price monitoring error:', error);
       }
     }, 300000); // Check every 5 minutes
   }
@@ -287,7 +287,7 @@ class ContractMonitor {
       severity: data.severity || 'info'
     };
 
-    console.log(`🚨 Alert: ${type}`, alert);
+    logger.info(`🚨 Alert: ${type}`, alert);
 
     // Send Discord alert
     if (this.discordWebhook) {
@@ -320,7 +320,7 @@ class ContractMonitor {
         embeds: [embed]
       });
     } catch (error) {
-      console.error('Discord alert failed:', error);
+      logger.error('Discord alert failed:', error);
     }
   }
 
@@ -345,7 +345,7 @@ class ContractMonitor {
 
       await this.emailTransporter.sendMail(mailOptions);
     } catch (error) {
-      console.error('Email alert failed:', error);
+      logger.error('Email alert failed:', error);
     }
   }
 
@@ -354,7 +354,7 @@ class ContractMonitor {
    */
   async logAlert(alert) {
     // TODO: Implement database logging
-    console.log('📝 Logging alert to database:', alert);
+    logger.info('📝 Logging alert to database:', alert);
   }
 
   /**
@@ -392,7 +392,7 @@ class ContractMonitor {
    */
   formatAlertFields(data) {
     const fields = [];
-    
+
     for (const [key, value] of Object.entries(data)) {
       if (key !== 'severity') {
         fields.push({
@@ -410,7 +410,7 @@ class ContractMonitor {
    * Get monitoring statistics
    */
   getStats() {
-    const uptime = this.stats.startTime ? 
+    const uptime = this.stats.startTime ?
       Date.now() - this.stats.startTime.getTime() : 0;
 
     return {
@@ -429,7 +429,7 @@ class ContractMonitor {
       ...this.alertThresholds,
       ...newThresholds
     };
-    console.log('✅ Alert thresholds updated:', this.alertThresholds);
+    logger.info('✅ Alert thresholds updated:', this.alertThresholds);
   }
 }
 

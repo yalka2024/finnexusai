@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finnexus-ai
+  labels:
+    name: finnexus-ai
+    environment: production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finnexus-monitoring
+  labels:
+    name: finnexus-monitoring
+    environment: production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finnexus-security
+  labels:
+    name: finnexus-security
+    environment: production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finnexus-ingress
+  labels:
+    name: finnexus-ingress
+    environment: production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finnexus-storage
+  labels:
+    name: finnexus-storage
+    environment: production

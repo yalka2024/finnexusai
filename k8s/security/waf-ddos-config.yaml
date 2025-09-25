@@ -1,0 +1,196 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: waf-ddos-config
+  namespace: finnexus-production
+data:
+  cloudflare-waf.yaml: |
+    # CloudFlare WAF Configuration
+    firewall_rules:
+      - name: "Block Bad Bots"
+        expression: "(cf.client.bot) and (not cf.client.bot in {\"googlebot\" \"bingbot\" \"slurp\" \"duckduckbot\"})"
+        action: "block"
+      
+      - name: "Rate Limit API"
+        expression: "(http.request.uri.path contains \"/api/\") and (cf.rate_limit.key eq \"${http.request.uri.path}\")"
+        action: "challenge"
+      
+      - name: "Block SQL Injection"
+        expression: "(http.request.uri.query contains \"' OR '1'='1\") or (http.request.uri.query contains \"UNION SELECT\") or (http.request.uri.query contains \"DROP TABLE\")"
+        action: "block"
+      
+      - name: "Block XSS Attacks"
+        expression: "(http.request.uri.query contains \"<script\") or (http.request.uri.query contains \"javascript:\") or (http.request.uri.query contains \"onload=\")"
+        action: "block"
+      
+      - name: "Block Path Traversal"
+        expression: "(http.request.uri.path contains \"../\") or (http.request.uri.path contains \"..\\\\\") or (http.request.uri.path contains \"%2e%2e%2f\")"
+        action: "block"
+    
+    ddos_protection:
+      level: "high"
+      challenge_passage: 30
+      browser_check: true
+      js_challenge: true
+      captcha_challenge: true
+    
+    rate_limiting:
+      - name: "API Rate Limiting"
+        url_pattern: "/api/*"
+        rate: "100/minute"
+        burst: 200
+        action: "challenge"
+      
+      - name: "Auth Rate Limiting"
+        url_pattern: "/api/auth/*"
+        rate: "10/minute"
+        burst: 20
+        action: "block"
+  
+  nginx-waf.conf: |
+    # NGINX WAF Configuration
+    http {
+        # Rate limiting zones
+        limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+        limit_req_zone $binary_remote_addr zone=auth:10m rate=1r/s;
+        
+        # Connection limiting
+        limit_conn_zone $binary_remote_addr zone=conn_limit_per_ip:10m;
+        limit_conn conn_limit_per_ip 20;
+        
+        # Security headers
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "no-referrer-when-downgrade" always;
+        add_header Content-Security-Policy "default-src 'self' https: data: blob: 'unsafe-inline'" always;
+        
+        # Block malicious user agents
+        map $http_user_agent $blocked_agent {
+            default 0;
+            ~*malicious 1;
+            ~*bot 1;
+            ~*scanner 1;
+            ~*crawler 1;
+        }
+        
+        # Block malicious IPs
+        geo $blocked_ip {
+            default 0;
+            192.168.1.0/24 1;
+            10.0.0.0/8 1;
+        }
+        
+        server {
+            listen 80;
+            server_name api.finainexus.com;
+            
+            # Block malicious requests
+            if ($blocked_agent) {
+                return 403;
+            }
+            
+            if ($blocked_ip) {
+                return 403;
+            }
+            
+            # Rate limiting for API endpoints
+            location /api/ {
+                limit_req zone=api burst=20 nodelay;
+                limit_req_status 429;
+                
+                proxy_pass http://backend_service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+            
+            # Rate limiting for auth endpoints
+            location /api/auth/ {
+                limit_req zone=auth burst=5 nodelay;
+                limit_req_status 429;
+                
+                proxy_pass http://backend_service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waf-nginx
+  namespace: finnexus-production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: waf-nginx
+  template:
+    metadata:
+      labels:
+        app: waf-nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: waf-config
+          mountPath: /etc/nginx/waf.conf
+          subPath: nginx-waf.conf
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: waf-ddos-config
+      - name: waf-config
+        configMap:
+          name: waf-ddos-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: waf-nginx-service
+  namespace: finnexus-production
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http
+  - port: 443
+    targetPort: 443
+    name: https
+  selector:
+    app: waf-nginx
+
+
+

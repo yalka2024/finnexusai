@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Gamification Engine
- * 
+ *
  * Handles gamification elements for financial education including:
  * - Achievement systems
  * - Progress tracking
@@ -58,7 +59,7 @@ export class GamificationEngine {
   async createLessonGamification(lesson) {
     const difficulty = lesson.difficulty || 'beginner';
     const duration = this.parseDuration(lesson.estimatedDuration);
-    
+
     return {
       points: this.calculateLessonPoints(difficulty, duration),
       tokenReward: this.calculateTokenReward(difficulty, duration),
@@ -78,19 +79,19 @@ export class GamificationEngine {
   async trackProgress(userId, activity) {
     const userStats = await this.getUserStats(userId);
     const progressUpdate = this.calculateProgress(userStats, activity);
-    
+
     // Update user stats
     await this.updateUserStats(userId, progressUpdate);
-    
+
     // Check for new achievements
     const newAchievements = await this.checkAchievements(userId, progressUpdate);
-    
+
     // Check for level up
     const levelUp = this.checkLevelUp(userStats, progressUpdate);
-    
+
     // Calculate streak
     const streakUpdate = await this.updateStreak(userId, activity);
-    
+
     return {
       points: progressUpdate.points,
       level: progressUpdate.level,
@@ -110,10 +111,10 @@ export class GamificationEngine {
       intermediate: 200,
       advanced: 300
     };
-    
+
     const durationMultiplier = Math.min(2.0, duration / 30); // Max 2x for 60+ minutes
     const difficultyMultiplier = basePoints[difficulty] || 100;
-    
+
     return Math.floor(difficultyMultiplier * durationMultiplier);
   }
 
@@ -126,10 +127,10 @@ export class GamificationEngine {
       intermediate: 20,
       advanced: 30
     };
-    
+
     const durationMultiplier = Math.min(1.5, duration / 30); // Max 1.5x for 45+ minutes
     const difficultyMultiplier = baseTokens[difficulty] || 10;
-    
+
     return Math.floor(difficultyMultiplier * durationMultiplier);
   }
 
@@ -145,7 +146,7 @@ export class GamificationEngine {
    */
   createLessonChallenges(lesson) {
     const challenges = [];
-    
+
     // Time-based challenges
     challenges.push({
       id: 'speed_demon',
@@ -155,7 +156,7 @@ export class GamificationEngine {
       target: 20,
       reward: { points: 50, tokens: 5 }
     });
-    
+
     // Accuracy challenges
     challenges.push({
       id: 'perfectionist',
@@ -165,7 +166,7 @@ export class GamificationEngine {
       target: 100,
       reward: { points: 100, tokens: 10 }
     });
-    
+
     // Engagement challenges
     challenges.push({
       id: 'active_learner',
@@ -175,7 +176,7 @@ export class GamificationEngine {
       target: 100,
       reward: { points: 75, tokens: 7 }
     });
-    
+
     return challenges;
   }
 
@@ -219,7 +220,7 @@ export class GamificationEngine {
     const newTotalPoints = userStats.totalPoints + points;
     const newLevel = this.calculateLevel(newTotalPoints);
     const tokenReward = this.calculateTokenReward(activity.difficulty, activity.duration);
-    
+
     return {
       points: points,
       totalPoints: newTotalPoints,
@@ -234,7 +235,7 @@ export class GamificationEngine {
    */
   calculateActivityPoints(activity) {
     let points = 0;
-    
+
     // Base points for activity type
     const basePoints = {
       lesson_completed: 100,
@@ -243,28 +244,28 @@ export class GamificationEngine {
       achievement_unlocked: 200,
       streak_maintained: 50
     };
-    
+
     points += basePoints[activity.type] || 0;
-    
+
     // Difficulty multiplier
     const difficultyMultiplier = {
       beginner: 1.0,
       intermediate: 1.5,
       advanced: 2.0
     };
-    
+
     points *= difficultyMultiplier[activity.difficulty] || 1.0;
-    
+
     // Accuracy multiplier
     if (activity.accuracy) {
       points *= (activity.accuracy / 100);
     }
-    
+
     // Time bonus
     if (activity.timeBonus) {
       points += activity.timeBonus;
     }
-    
+
     return Math.floor(points);
   }
 
@@ -286,7 +287,7 @@ export class GamificationEngine {
   async checkAchievements(userId, progressUpdate) {
     const userStats = await this.getUserStats(userId);
     const newAchievements = [];
-    
+
     // Check each achievement category
     Object.keys(this.achievements).forEach(category => {
       this.achievements[category].forEach(achievement => {
@@ -295,7 +296,7 @@ export class GamificationEngine {
         }
       });
     });
-    
+
     return newAchievements;
   }
 
@@ -307,27 +308,27 @@ export class GamificationEngine {
     if (userStats.achievements.includes(achievement.id)) {
       return false;
     }
-    
+
     // Check achievement conditions
     switch (achievement.id) {
-      case 'first_lesson':
-        return progressUpdate.totalPoints >= 100;
-      case 'budget_master':
-        return userStats.completedModules.includes('budgeting');
-      case 'savings_hero':
-        return userStats.totalSavings >= 1000;
-      case 'debt_free':
-        return userStats.totalDebt <= 0;
-      case 'investor_novice':
-        return userStats.investments.length > 0;
-      case 'portfolio_builder':
-        return userStats.portfolioDiversification >= 5;
-      case 'trading_pro':
-        return userStats.successfulTrades >= 100;
-      case 'defi_explorer':
-        return userStats.defiProtocols.length >= 3;
-      default:
-        return false;
+    case 'first_lesson':
+      return progressUpdate.totalPoints >= 100;
+    case 'budget_master':
+      return userStats.completedModules.includes('budgeting');
+    case 'savings_hero':
+      return userStats.totalSavings >= 1000;
+    case 'debt_free':
+      return userStats.totalDebt <= 0;
+    case 'investor_novice':
+      return userStats.investments.length > 0;
+    case 'portfolio_builder':
+      return userStats.portfolioDiversification >= 5;
+    case 'trading_pro':
+      return userStats.successfulTrades >= 100;
+    case 'defi_explorer':
+      return userStats.defiProtocols.length >= 3;
+    default:
+      return false;
     }
   }
 
@@ -337,7 +338,7 @@ export class GamificationEngine {
   checkLevelUp(userStats, progressUpdate) {
     const oldLevel = userStats.level;
     const newLevel = progressUpdate.level;
-    
+
     return {
       leveledUp: newLevel.level > oldLevel.level,
       oldLevel: oldLevel,
@@ -366,10 +367,10 @@ export class GamificationEngine {
     const userStats = await this.getUserStats(userId);
     const lastActivity = userStats.lastActivity;
     const now = new Date();
-    
+
     let streakType = 'none';
     let streakCount = 0;
-    
+
     // Check daily streak
     if (this.isSameDay(lastActivity, now)) {
       streakType = 'daily';
@@ -381,7 +382,7 @@ export class GamificationEngine {
       streakType = 'daily';
       streakCount = 1;
     }
-    
+
     // Check weekly streak
     if (this.isSameWeek(lastActivity, now)) {
       streakType = 'weekly';
@@ -390,7 +391,7 @@ export class GamificationEngine {
       streakType = 'weekly';
       streakCount = userStats.weeklyStreak + 1;
     }
-    
+
     return {
       type: streakType,
       count: streakCount,
@@ -408,10 +409,10 @@ export class GamificationEngine {
       weekly: [4, 8, 12, 24, 52],
       monthly: [3, 6, 12, 24, 36]
     };
-    
+
     const streakMilestones = milestones[streakType] || [];
     const nextMilestone = streakMilestones.find(milestone => milestone > currentCount);
-    
+
     return nextMilestone ? {
       target: nextMilestone,
       remaining: nextMilestone - currentCount,
@@ -428,10 +429,10 @@ export class GamificationEngine {
       weekly: { points: 500, tokens: 50 },
       monthly: { points: 2000, tokens: 200 }
     };
-    
+
     const baseReward = baseRewards[streakType] || { points: 100, tokens: 10 };
     const multiplier = Math.floor(milestone / 7); // Increase reward with milestone
-    
+
     return {
       points: baseReward.points * multiplier,
       tokens: baseReward.tokens * multiplier,
@@ -506,7 +507,7 @@ export class GamificationEngine {
 
   async updateUserStats(userId, progressUpdate) {
     // In real implementation, update database
-    console.log(`Updating stats for user ${userId}:`, progressUpdate);
+    logger.info(`Updating stats for user ${userId}:`, progressUpdate);
   }
 }
 

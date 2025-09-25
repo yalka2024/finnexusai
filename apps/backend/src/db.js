@@ -7,13 +7,13 @@ const pgPool = new Pool({
   host: 'localhost',
   database: 'finai',
   password: 'nexuspass',
-  port: 5432,
+  port: 5432
 });
 
 // MongoDB connection
 const mongoClient = new MongoClient('mongodb://localhost:27017', {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
+  useUnifiedTopology: true
 });
 
 async function connectMongo() {

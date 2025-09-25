@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Financial Avatar Service
  * 
@@ -92,7 +93,7 @@ export class AvatarService {
       
       return avatar;
     } catch (error) {
-      console.error('Avatar creation failed:', error);
+      logger.error('Avatar creation failed:', error);
       throw new Error('Failed to create financial avatar');
     }
   }
@@ -466,7 +467,7 @@ export class AvatarService {
 
   async saveAvatar(userId, avatar) {
     // In real implementation, save to database
-    console.log(`Saving avatar ${avatar.id} for user ${userId}`);
+    logger.info(`Saving avatar ${avatar.id} for user ${userId}`);
   }
 }
 

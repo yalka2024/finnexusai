@@ -1,0 +1,294 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finnexusai-backend
+  namespace: finnexusai-production
+  labels:
+    app: finnexusai-backend
+    environment: production
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: finnexusai-backend
+  template:
+    metadata:
+      labels:
+        app: finnexusai-backend
+        environment: production
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: finnexusai-backend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      containers:
+      - name: finnexusai-backend
+        image: finnexusai/backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: finnexusai-production-config
+              key: NODE_ENV
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: finnexusai-production-config
+              key: PORT
+        - name: API_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: finnexusai-production-config
+              key: API_VERSION
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: REDIS_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: JWT_SECRET
+        - name: JWT_REFRESH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: JWT_REFRESH_SECRET
+        - name: COINGECKO_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: COINGECKO_API_KEY
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: OPENAI_API_KEY
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: STRIPE_SECRET_KEY
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: AWS_SECRET_ACCESS_KEY
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: SENTRY_DSN
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: finnexusai-production-secrets
+              key: ENCRYPTION_KEY
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: logs
+          mountPath: /var/log
+        - name: ssl-certs
+          mountPath: /etc/ssl/certs
+          readOnly: true
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: logs
+        emptyDir: {}
+      - name: ssl-certs
+        secret:
+          secretName: finnexusai-production-tls
+      imagePullSecrets:
+      - name: finnexusai-production-registry
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-type: backend
+      tolerations:
+      - key: "backend-only"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - finnexusai-backend
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finnexusai-frontend
+  namespace: finnexusai-production
+  labels:
+    app: finnexusai-frontend
+    environment: production
+    tier: frontend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: finnexusai-frontend
+  template:
+    metadata:
+      labels:
+        app: finnexusai-frontend
+        environment: production
+        tier: frontend
+    spec:
+      containers:
+      - name: finnexusai-frontend
+        image: finnexusai/frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: API_BASE_URL
+          value: "https://api.finnexusai.com"
+        - name: WS_BASE_URL
+          value: "wss://api.finnexusai.com"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+      imagePullSecrets:
+      - name: finnexusai-production-registry
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-type: frontend
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: finnexusai-backend
+  namespace: finnexusai-production
+  labels:
+    app: finnexusai-backend
+    environment: production
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: finnexusai-backend-role
+  namespace: finnexusai-production
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: finnexusai-backend-binding
+  namespace: finnexusai-production
+subjects:
+- kind: ServiceAccount
+  name: finnexusai-backend
+  namespace: finnexusai-production
+roleRef:
+  kind: Role
+  name: finnexusai-backend-role
+  apiGroup: rbac.authorization.k8s.io
+

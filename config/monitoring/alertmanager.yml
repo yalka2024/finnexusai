@@ -1,0 +1,208 @@
+# FinNexusAI AlertManager Configuration
+# Comprehensive alerting for production trading platform
+
+global:
+  smtp_smarthost: 'smtp.finnexusai.com:587'
+  smtp_from: 'alerts@finnexusai.com'
+  smtp_auth_username: 'alerts@finnexusai.com'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+
+# Templates
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Routing tree
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 5s
+      repeat_interval: 5m
+    
+    # Trading engine alerts
+    - match:
+        service: trading-engine
+      receiver: 'trading-alerts'
+      group_interval: 30s
+    
+    # HFT engine alerts - ultra-fast response
+    - match:
+        service: hft-engine
+      receiver: 'hft-alerts'
+      group_wait: 1s
+      group_interval: 5s
+      repeat_interval: 1m
+    
+    # Database alerts
+    - match:
+        service: postgres
+      receiver: 'database-alerts'
+    
+    # Security alerts
+    - match:
+        severity: security
+      receiver: 'security-alerts'
+    
+    # Performance alerts
+    - match:
+        severity: warning
+      receiver: 'performance-alerts'
+
+# Receivers
+receivers:
+  # Critical alerts - multiple channels
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'oncall@finnexusai.com'
+        subject: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        body: |
+          Alert: {{ .GroupLabels.alertname }}
+          Service: {{ .GroupLabels.service }}
+          Severity: {{ .GroupLabels.severity }}
+          
+          {{ range .Alerts }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt }}
+          {{ end }}
+    
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#alerts-critical'
+        title: '🚨 CRITICAL Alert'
+        text: '{{ .GroupLabels.alertname }} - {{ .GroupLabels.service }}'
+        send_resolved: true
+    
+    pagerduty_configs:
+      - routing_key: '${PAGERDUTY_ROUTING_KEY}'
+        description: '{{ .GroupLabels.alertname }}'
+        details:
+          service: '{{ .GroupLabels.service }}'
+          severity: '{{ .GroupLabels.severity }}'
+
+  # Trading engine alerts
+  - name: 'trading-alerts'
+    email_configs:
+      - to: 'trading-team@finnexusai.com'
+        subject: '📈 Trading Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Trading Engine Alert
+          {{ range .Alerts }}
+          {{ .Annotations.description }}
+          {{ end }}
+    
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#trading-alerts'
+        title: '📈 Trading Alert'
+        text: '{{ .GroupLabels.alertname }}'
+
+  # HFT alerts - ultra-fast response
+  - name: 'hft-alerts'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#hft-alerts'
+        title: '⚡ HFT Alert'
+        text: '{{ .GroupLabels.alertname }} - Latency: {{ .Annotations.latency }}'
+    
+    webhook_configs:
+      - url: 'http://hft-alert-handler:8080/webhook'
+        send_resolved: true
+
+  # Database alerts
+  - name: 'database-alerts'
+    email_configs:
+      - to: 'database-team@finnexusai.com'
+        subject: '🗄️ Database Alert: {{ .GroupLabels.alertname }}'
+    
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#database-alerts'
+
+  # Security alerts
+  - name: 'security-alerts'
+    email_configs:
+      - to: 'security@finnexusai.com'
+        subject: '🔒 SECURITY Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          SECURITY ALERT - IMMEDIATE ATTENTION REQUIRED
+          {{ range .Alerts }}
+          {{ .Annotations.description }}
+          {{ end }}
+    
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#security-alerts'
+    
+    pagerduty_configs:
+      - routing_key: '${PAGERDUTY_SECURITY_KEY}'
+        description: 'SECURITY: {{ .GroupLabels.alertname }}'
+
+  # Performance alerts
+  - name: 'performance-alerts'
+    email_configs:
+      - to: 'performance-team@finnexusai.com'
+        subject: '⚡ Performance Alert: {{ .GroupLabels.alertname }}'
+    
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#performance-alerts'
+
+  # Default webhook receiver
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://alert-webhook:8080/webhook'
+
+# Inhibition rules
+inhibit_rules:
+  # Inhibit warning alerts when critical alerts are firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
+  
+  # Inhibit HFT alerts when trading engine is down
+  - source_match:
+      service: 'trading-engine'
+      alertname: 'TradingEngineDown'
+    target_match:
+      service: 'hft-engine'
+    equal: ['cluster']
+
+# Time intervals
+time_intervals:
+  # Business hours (9 AM - 5 PM EST)
+  - name: 'business_hours'
+    time_intervals:
+      - times:
+          - start_time: '09:00'
+            end_time: '17:00'
+        weekdays: ['monday:friday']
+        location: 'America/New_York'
+  
+  # Maintenance windows (Sundays 2 AM - 4 AM EST)
+  - name: 'maintenance_window'
+    time_intervals:
+      - times:
+          - start_time: '02:00'
+            end_time: '04:00'
+        weekdays: ['sunday']
+        location: 'America/New_York'
+
+# Mute time intervals
+mute_time_intervals:
+  - name: 'maintenance'
+    time_intervals:
+      - times:
+          - start_time: '02:00'
+            end_time: '04:00'
+        weekdays: ['sunday']
+        location: 'America/New_York'
+

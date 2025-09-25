@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Voice Emotion Analyzer
- * 
+ *
  * Analyzes voice tone, pitch, rhythm, and other acoustic features
  * to detect emotional states during financial interactions.
  */
@@ -14,7 +15,7 @@ export class VoiceEmotionAnalyzer {
     this.audioContext = new AudioContext();
     this.mfcc = new MFCC();
     this.pitchDetector = new PitchDetector();
-    
+
     // Emotion detection thresholds
     this.thresholds = {
       stress: {
@@ -49,7 +50,7 @@ export class VoiceEmotionAnalyzer {
     try {
       const audioBuffer = await this.audioContext.decodeAudioData(audioData);
       const features = await this.analyzeAudioBuffer(audioBuffer);
-      
+
       return {
         confidence: features.confidence,
         stressLevel: features.stressLevel,
@@ -59,7 +60,7 @@ export class VoiceEmotionAnalyzer {
         rawFeatures: features.rawFeatures
       };
     } catch (error) {
-      console.error('Voice analysis failed:', error);
+      logger.error('Voice analysis failed:', error);
       return this.getDefaultFeatures();
     }
   }
@@ -70,19 +71,19 @@ export class VoiceEmotionAnalyzer {
   async analyzeAudioBuffer(audioBuffer) {
     const samples = audioBuffer.getChannelData(0);
     const sampleRate = audioBuffer.sampleRate;
-    
+
     // Extract basic features
     const pitch = await this.extractPitch(samples, sampleRate);
     const mfccFeatures = await this.extractMFCC(samples, sampleRate);
     const rhythm = await this.extractRhythm(samples, sampleRate);
     const volume = await this.extractVolume(samples, sampleRate);
-    
+
     // Calculate emotion indicators
     const stressLevel = this.calculateStressLevel(pitch, rhythm, volume);
     const confidenceLevel = this.calculateConfidenceLevel(pitch, rhythm, volume);
     const excitementLevel = this.calculateExcitementLevel(pitch, rhythm, volume);
     const frustrationLevel = this.calculateFrustrationLevel(pitch, rhythm, volume);
-    
+
     return {
       confidence: this.calculateOverallConfidence(pitch, mfccFeatures, rhythm, volume),
       stressLevel,
@@ -103,7 +104,7 @@ export class VoiceEmotionAnalyzer {
    */
   async extractPitch(samples, sampleRate) {
     const pitchData = await this.pitchDetector.detect(samples, sampleRate);
-    
+
     return {
       fundamental: pitchData.fundamental,
       harmonics: pitchData.harmonics,
@@ -118,7 +119,7 @@ export class VoiceEmotionAnalyzer {
    */
   async extractMFCC(samples, sampleRate) {
     const mfccData = await this.mfcc.extract(samples, sampleRate);
-    
+
     return {
       coefficients: mfccData.coefficients,
       energy: mfccData.energy,
@@ -133,17 +134,17 @@ export class VoiceEmotionAnalyzer {
   async extractRhythm(samples, sampleRate) {
     const windowSize = Math.floor(sampleRate * 0.025); // 25ms windows
     const hopSize = Math.floor(sampleRate * 0.01); // 10ms hop
-    
+
     const energyFrames = [];
     for (let i = 0; i < samples.length - windowSize; i += hopSize) {
       const frame = samples.slice(i, i + windowSize);
       const energy = frame.reduce((sum, sample) => sum + sample * sample, 0) / windowSize;
       energyFrames.push(energy);
     }
-    
+
     // Detect speech segments
     const speechSegments = this.detectSpeechSegments(energyFrames);
-    
+
     return {
       speakingRate: this.calculateSpeakingRate(speechSegments),
       pauseFrequency: this.calculatePauseFrequency(speechSegments),
@@ -158,13 +159,13 @@ export class VoiceEmotionAnalyzer {
   async extractVolume(samples, sampleRate) {
     const windowSize = Math.floor(sampleRate * 0.1); // 100ms windows
     const volumeFrames = [];
-    
+
     for (let i = 0; i < samples.length - windowSize; i += windowSize) {
       const frame = samples.slice(i, i + windowSize);
       const rms = Math.sqrt(frame.reduce((sum, sample) => sum + sample * sample, 0) / windowSize);
       volumeFrames.push(rms);
     }
-    
+
     return {
       average: this.calculateAverage(volumeFrames),
       variation: this.calculateVariation(volumeFrames),
@@ -180,7 +181,7 @@ export class VoiceEmotionAnalyzer {
     const pitchStress = pitch.variation > this.thresholds.stress.pitchVariation ? 1 : 0;
     const rhythmStress = rhythm.speakingRate < this.thresholds.stress.speakingRate ? 1 : 0;
     const volumeStress = volume.variation > this.thresholds.stress.volumeVariation ? 1 : 0;
-    
+
     return (pitchStress + rhythmStress + volumeStress) / 3;
   }
 
@@ -191,7 +192,7 @@ export class VoiceEmotionAnalyzer {
     const pitchConfidence = pitch.stability > this.thresholds.confidence.pitchStability ? 1 : 0;
     const rhythmConfidence = rhythm.speakingRate > this.thresholds.confidence.speakingRate ? 1 : 0;
     const volumeConfidence = volume.consistency > this.thresholds.confidence.volumeConsistency ? 1 : 0;
-    
+
     return (pitchConfidence + rhythmConfidence + volumeConfidence) / 3;
   }
 
@@ -202,7 +203,7 @@ export class VoiceEmotionAnalyzer {
     const pitchExcitement = pitch.range > this.thresholds.excitement.pitchIncrease ? 1 : 0;
     const rhythmExcitement = rhythm.speakingRate > this.thresholds.excitement.speakingRate ? 1 : 0;
     const volumeExcitement = volume.average > this.thresholds.excitement.volumeIncrease ? 1 : 0;
-    
+
     return (pitchExcitement + rhythmExcitement + volumeExcitement) / 3;
   }
 
@@ -213,7 +214,7 @@ export class VoiceEmotionAnalyzer {
     const pitchFrustration = pitch.variation > this.thresholds.frustration.pitchVariation ? 1 : 0;
     const rhythmFrustration = rhythm.speakingRate < this.thresholds.frustration.speakingRate ? 1 : 0;
     const volumeFrustration = volume.peaks.length > this.thresholds.frustration.volumeSpikes ? 1 : 0;
-    
+
     return (pitchFrustration + rhythmFrustration + volumeFrustration) / 3;
   }
 
@@ -225,7 +226,7 @@ export class VoiceEmotionAnalyzer {
     const mfccConfidence = mfcc.coefficients.length > 0 ? 0.9 : 0.1;
     const rhythmConfidence = rhythm.speechSegments.length > 0 ? 0.7 : 0.3;
     const volumeConfidence = volume.average > 0 ? 0.8 : 0.2;
-    
+
     return (pitchConfidence + mfccConfidence + rhythmConfidence + volumeConfidence) / 4;
   }
 
@@ -237,7 +238,7 @@ export class VoiceEmotionAnalyzer {
     const segments = [];
     let inSpeech = false;
     let startFrame = 0;
-    
+
     energyFrames.forEach((energy, index) => {
       if (energy > threshold && !inSpeech) {
         inSpeech = true;
@@ -252,7 +253,7 @@ export class VoiceEmotionAnalyzer {
         });
       }
     });
-    
+
     return segments;
   }
 
@@ -270,10 +271,10 @@ export class VoiceEmotionAnalyzer {
    */
   calculateSpeakingRate(speechSegments) {
     if (speechSegments.length === 0) return 0;
-    
+
     const totalDuration = speechSegments.reduce((sum, seg) => sum + seg.duration, 0);
     const averageSegmentDuration = totalDuration / speechSegments.length;
-    
+
     // Estimate words per minute (rough approximation)
     return Math.min(1, averageSegmentDuration / 10);
   }
@@ -290,15 +291,15 @@ export class VoiceEmotionAnalyzer {
    */
   calculateRhythmRegularity(energyFrames) {
     if (energyFrames.length < 10) return 0;
-    
+
     const intervals = [];
     for (let i = 1; i < energyFrames.length; i++) {
-      intervals.push(Math.abs(energyFrames[i] - energyFrames[i-1]));
+      intervals.push(Math.abs(energyFrames[i] - energyFrames[i - 1]));
     }
-    
+
     const averageInterval = this.calculateAverage(intervals);
     const variance = this.calculateVariance(intervals, averageInterval);
-    
+
     return Math.max(0, 1 - (variance / averageInterval));
   }
 
@@ -315,10 +316,10 @@ export class VoiceEmotionAnalyzer {
    */
   calculateVolumeConsistency(volumeFrames) {
     if (volumeFrames.length < 2) return 0;
-    
+
     const average = this.calculateAverage(volumeFrames);
     const variance = this.calculateVariance(volumeFrames, average);
-    
+
     return Math.max(0, 1 - (variance / average));
   }
 

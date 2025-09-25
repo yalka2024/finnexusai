@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Emotion Detection Service
- * 
+ *
  * This service detects user emotions through multiple modalities:
  * - Voice tone analysis
  * - Facial expression recognition
@@ -19,11 +20,11 @@ export class EmotionDetectionService {
       appId: process.env.AFFECTIVA_APP_ID,
       appSecret: process.env.AFFECTIVA_APP_SECRET
     });
-    
+
     this.voiceAnalyzer = new VoiceEmotionAnalyzer();
     this.biometricSensor = new BiometricSensor();
     this.behavioralAnalyzer = new BehavioralAnalyzer();
-    
+
     this.emotionHistory = new Map();
     this.stressThresholds = {
       low: 0.3,
@@ -63,7 +64,7 @@ export class EmotionDetectionService {
 
       return emotionState;
     } catch (error) {
-      console.error('Emotion detection failed:', error);
+      logger.error('Emotion detection failed:', error);
       return this.getDefaultEmotionState();
     }
   }
@@ -75,7 +76,7 @@ export class EmotionDetectionService {
     if (!audioData) return { confidence: 0, emotions: {} };
 
     const voiceFeatures = await this.voiceAnalyzer.extractFeatures(audioData);
-    
+
     return {
       confidence: voiceFeatures.confidence,
       emotions: {
@@ -95,7 +96,7 @@ export class EmotionDetectionService {
     if (!videoData) return { confidence: 0, emotions: {} };
 
     const facialData = await this.affectiva.analyzeFrame(videoData);
-    
+
     return {
       confidence: facialData.confidence,
       emotions: {
@@ -118,7 +119,7 @@ export class EmotionDetectionService {
     if (!biometricData) return { stressLevel: 0, confidence: 0 };
 
     const stressMetrics = await this.biometricSensor.calculateStress(biometricData);
-    
+
     return {
       stressLevel: stressMetrics.overallStress,
       confidence: stressMetrics.confidence,
@@ -138,7 +139,7 @@ export class EmotionDetectionService {
     if (!behaviorData) return { patterns: {}, confidence: 0 };
 
     const patterns = await this.behavioralAnalyzer.analyzePatterns(behaviorData);
-    
+
     return {
       patterns: {
         tradingFrequency: patterns.tradingFrequency,
@@ -183,19 +184,19 @@ export class EmotionDetectionService {
       const data = sources[source];
       if (data && data.confidence > 0.5) {
         const weight = weights[source];
-        
+
         // Aggregate stress indicators
         if (data.emotions?.stress) {
           aggregatedEmotion.overallStress += data.emotions.stress * weight;
         }
-        
+
         // Aggregate other emotions
         Object.keys(aggregatedEmotion).forEach(emotion => {
           if (data.emotions?.[emotion] && typeof data.emotions[emotion] === 'number') {
             aggregatedEmotion[emotion] += data.emotions[emotion] * weight;
           }
         });
-        
+
         // Update confidence
         aggregatedEmotion.confidence += data.confidence * weight;
       }
@@ -232,14 +233,14 @@ export class EmotionDetectionService {
    */
   getEmotionPatterns(userId) {
     const history = this.emotionHistory.get(userId) || [];
-    
+
     if (history.length < 5) {
       return { patterns: [], confidence: 0 };
     }
 
     // Analyze patterns over time
     const patterns = this.behavioralAnalyzer.identifyPatterns(history);
-    
+
     return {
       patterns: patterns,
       confidence: patterns.length > 0 ? 0.8 : 0.2,
@@ -258,7 +259,7 @@ export class EmotionDetectionService {
     const older = history.slice(-6, -3);
 
     const recentAvg = recent.reduce((sum, h) => sum + h.overallStress, 0) / recent.length;
-    const olderAvg = older.length > 0 ? 
+    const olderAvg = older.length > 0 ?
       older.reduce((sum, h) => sum + h.overallStress, 0) / older.length : recentAvg;
 
     const change = recentAvg - olderAvg;

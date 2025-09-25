@@ -1,0 +1,34 @@
+﻿{
+    "Summary":  {
+                    "Failed":  1,
+                    "Total":  5,
+                    "Passed":  4
+                },
+    "ProductionReady":  true,
+    "Tests":  {
+                  "Performance":  {
+                                      "Status":  "Error",
+                                      "Name":  "Load Testing"
+                                  },
+                  "CodeQuality":  {
+                                      "Status":  "Passed",
+                                      "Name":  "ESLint Code Quality"
+                                  },
+                  "Security":  {
+                                   "Status":  "Passed",
+                                   "Name":  "Security Validation"
+                               },
+                  "Coverage":  {
+                                   "Status":  "Passed",
+                                   "Name":  "Jest Test Coverage"
+                               },
+                  "Database":  {
+                                   "Status":  "Passed",
+                                   "Name":  "Database Connectivity"
+                               }
+              },
+    "ReadinessScore":  80,
+    "StartTime":  "\/Date(1758617093796)\/",
+    "EndTime":  "\/Date(1758617110608)\/",
+    "Duration":  0.28018698666666669
+}

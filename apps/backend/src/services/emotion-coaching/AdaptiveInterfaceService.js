@@ -1,6 +1,6 @@
 /**
  * FinAI Nexus - Adaptive Interface Service
- * 
+ *
  * Adapts the user interface based on detected emotional states
  * to provide optimal user experience and reduce stress.
  */
@@ -98,7 +98,7 @@ export class AdaptiveInterfaceService {
   adaptInterface(emotionState, userPreferences = {}) {
     const mode = this.determineInterfaceMode(emotionState, userPreferences);
     const configuration = this.buildInterfaceConfiguration(mode, emotionState, userPreferences);
-    
+
     return {
       mode: mode,
       configuration: configuration,
@@ -112,22 +112,22 @@ export class AdaptiveInterfaceService {
    */
   determineInterfaceMode(emotionState, userPreferences) {
     const { overallStress, confidence, frustration, fear } = emotionState;
-    
+
     // High stress or negative emotions -> Simplified mode
     if (overallStress > 0.7 || frustration > 0.6 || fear > 0.5) {
       return 'simplified';
     }
-    
+
     // High confidence -> Advanced mode
     if (confidence > 0.8 && overallStress < 0.3) {
       return 'advanced';
     }
-    
+
     // User preference override
     if (userPreferences.preferredMode) {
       return userPreferences.preferredMode;
     }
-    
+
     // Default to standard mode
     return 'standard';
   }
@@ -139,7 +139,7 @@ export class AdaptiveInterfaceService {
     const baseConfig = this.interfaceModes[mode];
     const colorScheme = this.getColorScheme(mode, emotionState);
     const animations = this.getAnimationSettings(mode, emotionState);
-    
+
     return {
       ...baseConfig,
       colorScheme: colorScheme,
@@ -158,7 +158,7 @@ export class AdaptiveInterfaceService {
    */
   getColorScheme(mode, emotionState) {
     const baseScheme = this.colorSchemes[mode];
-    
+
     // Adjust colors based on emotion
     if (emotionState.overallStress > 0.6) {
       return {
@@ -167,7 +167,7 @@ export class AdaptiveInterfaceService {
         background: this.lightenColor(baseScheme.background, 0.1)
       };
     }
-    
+
     if (emotionState.confidence > 0.8) {
       return {
         ...baseScheme,
@@ -175,7 +175,7 @@ export class AdaptiveInterfaceService {
         accent: this.brightenColor(baseScheme.accent, 0.1)
       };
     }
-    
+
     return baseScheme;
   }
 
@@ -184,7 +184,7 @@ export class AdaptiveInterfaceService {
    */
   getAnimationSettings(mode, emotionState) {
     const baseAnimations = this.animationSettings[mode];
-    
+
     // Reduce animations for high stress
     if (emotionState.overallStress > 0.7) {
       return {
@@ -193,7 +193,7 @@ export class AdaptiveInterfaceService {
         scale: Math.max(0.9, baseAnimations.scale - 0.1)
       };
     }
-    
+
     // Enhance animations for high confidence
     if (emotionState.confidence > 0.8) {
       return {
@@ -202,7 +202,7 @@ export class AdaptiveInterfaceService {
         scale: baseAnimations.scale + 0.05
       };
     }
-    
+
     return baseAnimations;
   }
 
@@ -216,21 +216,21 @@ export class AdaptiveInterfaceService {
       grouping: 'logical',
       hierarchy: 'clear'
     };
-    
+
     // High stress -> simplified layout
     if (emotionState.overallStress > 0.7) {
       layout.density = 'sparse';
       layout.grouping = 'minimal';
       layout.hierarchy = 'flat';
     }
-    
+
     // High confidence -> complex layout
     if (emotionState.confidence > 0.8) {
       layout.density = 'compact';
       layout.grouping = 'advanced';
       layout.hierarchy = 'detailed';
     }
-    
+
     return layout;
   }
 
@@ -244,7 +244,7 @@ export class AdaptiveInterfaceService {
       lineHeight: 'normal',
       letterSpacing: 'normal'
     };
-    
+
     // High stress -> larger, clearer text
     if (emotionState.overallStress > 0.7) {
       typography.fontSize = 'large';
@@ -252,7 +252,7 @@ export class AdaptiveInterfaceService {
       typography.lineHeight = 'relaxed';
       typography.letterSpacing = 'wide';
     }
-    
+
     // High confidence -> smaller, denser text
     if (emotionState.confidence > 0.8) {
       typography.fontSize = 'small';
@@ -260,7 +260,7 @@ export class AdaptiveInterfaceService {
       typography.lineHeight = 'tight';
       typography.letterSpacing = 'narrow';
     }
-    
+
     return typography;
   }
 
@@ -273,21 +273,21 @@ export class AdaptiveInterfaceService {
       margin: 'normal',
       gap: 'normal'
     };
-    
+
     // High stress -> more spacing
     if (emotionState.overallStress > 0.7) {
       spacing.padding = 'large';
       spacing.margin = 'large';
       spacing.gap = 'large';
     }
-    
+
     // High confidence -> less spacing
     if (emotionState.confidence > 0.8) {
       spacing.padding = 'small';
       spacing.margin = 'small';
       spacing.gap = 'small';
     }
-    
+
     return spacing;
   }
 
@@ -302,14 +302,14 @@ export class AdaptiveInterfaceService {
       keyboardShortcuts: true,
       voiceCommands: true
     };
-    
+
     // High stress -> reduce interactions
     if (emotionState.overallStress > 0.7) {
       interactions.hoverEffects = false;
       interactions.clickAnimations = false;
       interactions.dragAndDrop = false;
     }
-    
+
     // High confidence -> enable all interactions
     if (emotionState.confidence > 0.8) {
       interactions.hoverEffects = true;
@@ -318,7 +318,7 @@ export class AdaptiveInterfaceService {
       interactions.keyboardShortcuts = true;
       interactions.voiceCommands = true;
     }
-    
+
     return interactions;
   }
 
@@ -333,7 +333,7 @@ export class AdaptiveInterfaceService {
       vibration: true,
       popup: true
     };
-    
+
     // High stress -> reduce notifications
     if (emotionState.overallStress > 0.7) {
       notifications.frequency = 'low';
@@ -342,7 +342,7 @@ export class AdaptiveInterfaceService {
       notifications.vibration = false;
       notifications.popup = false;
     }
-    
+
     // High confidence -> more notifications
     if (emotionState.confidence > 0.8) {
       notifications.frequency = 'high';
@@ -351,7 +351,7 @@ export class AdaptiveInterfaceService {
       notifications.vibration = true;
       notifications.popup = true;
     }
-    
+
     return notifications;
   }
 
@@ -366,7 +366,7 @@ export class AdaptiveInterfaceService {
       voiceOver: false,
       reducedMotion: false
     };
-    
+
     // High stress -> enhance accessibility
     if (emotionState.overallStress > 0.7) {
       accessibility.highContrast = true;
@@ -375,7 +375,7 @@ export class AdaptiveInterfaceService {
       accessibility.voiceOver = true;
       accessibility.reducedMotion = true;
     }
-    
+
     return accessibility;
   }
 
@@ -384,7 +384,7 @@ export class AdaptiveInterfaceService {
    */
   generateInterfaceRecommendations(emotionState) {
     const recommendations = [];
-    
+
     if (emotionState.overallStress > 0.7) {
       recommendations.push({
         type: 'stress_reduction',
@@ -393,7 +393,7 @@ export class AdaptiveInterfaceService {
         priority: 'high'
       });
     }
-    
+
     if (emotionState.frustration > 0.6) {
       recommendations.push({
         type: 'frustration_support',
@@ -402,7 +402,7 @@ export class AdaptiveInterfaceService {
         priority: 'medium'
       });
     }
-    
+
     if (emotionState.confidence > 0.8) {
       recommendations.push({
         type: 'confidence_boost',
@@ -411,7 +411,7 @@ export class AdaptiveInterfaceService {
         priority: 'low'
       });
     }
-    
+
     return recommendations;
   }
 
@@ -438,7 +438,7 @@ export class AdaptiveInterfaceService {
    */
   getInterfaceState(emotionState, userPreferences) {
     const adaptation = this.adaptInterface(emotionState, userPreferences);
-    
+
     return {
       mode: adaptation.mode,
       colors: adaptation.configuration.colorScheme,

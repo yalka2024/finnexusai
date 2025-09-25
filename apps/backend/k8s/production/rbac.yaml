@@ -1,0 +1,290 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: finnexus-backend
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+  annotations:
+    finnexusai.com/team: "backend"
+    finnexusai.com/contact: "team@finnexusai.com"
+    finnexusai.com/description: "Service account for FinNexusAI backend application"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: finnexus-backend-role
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log", "pods/exec"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["argoproj.io"]
+  resources: ["rollouts"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: finnexus-backend-rolebinding
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+subjects:
+- kind: ServiceAccount
+  name: finnexus-backend
+  namespace: finnexus-production
+roleRef:
+  kind: Role
+  name: finnexus-backend-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: finnexus-backend-cluster-role
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "persistentvolumes", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["nodes", "pods"]
+  verbs: ["get", "list"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["cert-manager.io"]
+  resources: ["certificates", "issuers", "clusterissuers"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: finnexus-backend-cluster-rolebinding
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+subjects:
+- kind: ServiceAccount
+  name: finnexus-backend
+  namespace: finnexus-production
+roleRef:
+  kind: ClusterRole
+  name: finnexus-backend-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: finnexus-backend-token
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+  annotations:
+    kubernetes.io/service-account.name: "finnexus-backend"
+type: kubernetes.io/service-account-token
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: finnexus-backend-netpol
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+spec:
+  podSelector:
+    matchLabels:
+      app: finnexus-backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: finnexus-production
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+    - podSelector:
+        matchLabels:
+          app: finnexus-backend
+    ports:
+    - protocol: TCP
+      port: 3000
+    - protocol: TCP
+      port: 9090
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: finnexus-production
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 27017
+    - protocol: TCP
+      port: 6379
+    - protocol: TCP
+      port: 9090
+    - protocol: TCP
+      port: 9200
+    - protocol: TCP
+      port: 5601
+    - protocol: TCP
+      port: 16686
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: finnexus-backend-pdb
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: finnexus-backend
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: finnexus-backend-hpa
+  namespace: finnexus-production
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: finnexus-backend
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+
+---
+apiVersion: v1
+kind: PriorityClass
+metadata:
+  name: high-priority
+  labels:
+    app: finnexus-backend
+    version: v1.0.0
+    component: backend
+    tier: application
+    environment: production
+value: 1000000
+globalDefault: false
+description: "High priority class for FinNexusAI backend application"

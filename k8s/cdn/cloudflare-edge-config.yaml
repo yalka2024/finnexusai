@@ -1,0 +1,323 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-edge-config
+  namespace: finnexus-production
+data:
+  cloudflare-config.yaml: |
+    # CloudFlare Global Edge Configuration for FinAI Nexus
+    zones:
+      - zone_id: "${CLOUDFLARE_ZONE_ID}"
+        name: "finainexus.com"
+        plan: "enterprise"
+    
+    # Global Edge Locations (200+ locations)
+    edge_locations:
+      - name: "North America"
+        locations:
+          - "us-east-1"    # Virginia
+          - "us-west-1"    # California
+          - "us-central-1" # Iowa
+          - "ca-east-1"    # Toronto
+          - "ca-west-1"    # Vancouver
+          - "mx-central-1" # Mexico City
+    
+      - name: "Europe"
+        locations:
+          - "eu-west-1"    # Dublin
+          - "eu-central-1" # Frankfurt
+          - "eu-north-1"   # Stockholm
+          - "eu-south-1"   # Milan
+          - "gb-south-1"   # London
+          - "fr-central-1" # Paris
+          - "nl-central-1" # Amsterdam
+    
+      - name: "Asia Pacific"
+        locations:
+          - "ap-southeast-1" # Singapore
+          - "ap-northeast-1" # Tokyo
+          - "ap-southeast-2" # Sydney
+          - "ap-south-1"     # Mumbai
+          - "ap-northeast-2" # Seoul
+          - "ap-east-1"      # Hong Kong
+    
+      - name: "South America"
+        locations:
+          - "sa-east-1"    # São Paulo
+          - "sa-central-1" # Santiago
+          - "sa-west-1"    # Bogotá
+    
+      - name: "Middle East & Africa"
+        locations:
+          - "me-south-1"   # Bahrain
+          - "af-south-1"   # Cape Town
+          - "af-central-1" # Lagos
+    
+    # Cache Rules Configuration
+    cache_rules:
+      - name: "Static Assets"
+        url_pattern: "*.{css,js,png,jpg,jpeg,gif,svg,woff,woff2,ttf,eot,ico}"
+        cache_level: "cache_everything"
+        edge_ttl: 31536000  # 1 year
+        browser_ttl: 31536000
+        cache_key: "ignore_query_string"
+        compression: true
+        brotli: true
+        polish: "lossless"
+        webp: true
+    
+      - name: "API Endpoints"
+        url_pattern: "/api/*"
+        cache_level: "bypass"
+        edge_ttl: 0
+        browser_ttl: 0
+        cache_key: "include_query_string"
+    
+      - name: "HTML Pages"
+        url_pattern: "*.html"
+        cache_level: "cache_everything"
+        edge_ttl: 3600  # 1 hour
+        browser_ttl: 1800  # 30 minutes
+        cache_key: "include_query_string"
+        compression: true
+        brotli: true
+    
+      - name: "GraphQL"
+        url_pattern: "/graphql"
+        cache_level: "bypass"
+        edge_ttl: 0
+        browser_ttl: 0
+        cache_key: "include_query_string"
+    
+    # Security Configuration
+    security:
+      ssl: "full"
+      always_use_https: true
+      min_tls_version: "1.2"
+      tls_1_3: "on"
+      automatic_https_rewrites: true
+      hsts_enabled: true
+      hsts_max_age: 31536000
+      hsts_include_subdomains: true
+      hsts_preload: true
+      opportunistic_encryption: true
+      tls_client_auth: "on"
+    
+    # DDoS Protection
+    ddos_protection:
+      level: "high"
+      challenge_passage: 30
+      browser_check: true
+      js_challenge: true
+      captcha_challenge: true
+    
+    # Rate Limiting
+    rate_limiting:
+      - name: "API Rate Limiting"
+        url_pattern: "/api/*"
+        rate: "100/minute"
+        burst: 200
+        action: "challenge"
+        response:
+          status_code: 429
+          content_type: "application/json"
+          body: '{"error": "Rate limit exceeded", "retry_after": 60}'
+      
+      - name: "Authentication Rate Limiting"
+        url_pattern: "/api/auth/*"
+        rate: "10/minute"
+        burst: 20
+        action: "block"
+        response:
+          status_code: 429
+          content_type: "application/json"
+          body: '{"error": "Authentication rate limit exceeded"}'
+      
+      - name: "General Rate Limiting"
+        url_pattern: "/*"
+        rate: "1000/minute"
+        burst: 2000
+        action: "challenge"
+    
+    # Performance Optimization
+    performance:
+      # Compression
+      brotli: true
+      gzip: true
+      
+      # HTTP/2 and HTTP/3
+      http2: true
+      http3: true
+      
+      # Image Optimization
+      mirage: true
+      polish: "lossless"
+      webp: true
+      
+      # JavaScript Optimization
+      rocket_loader: true
+      
+      # Minification
+      minify:
+        css: true
+        html: true
+        js: true
+      
+      # Caching
+      cache_level: "aggressive"
+      development_mode: false
+      
+      # Mobile Optimization
+      mobile_redirect: false
+      mobile_subdomain: false
+      
+      # IPv6
+      ipv6: true
+      
+      # Pseudo IPv4
+      pseudo_ipv4: "off"
+    
+    # Analytics and Logging
+    analytics:
+      web_analytics: true
+      bot_analytics: true
+      real_user_monitoring: true
+      logpush: true
+      logpush_destinations:
+        - type: "s3"
+          name: "finnexus-logs"
+          endpoint: "s3://finnexus-logs.s3.amazonaws.com"
+          fields: "RayID,EdgeStartTimestamp,CacheStatus,ClientIP,ClientCountry,ClientRegion,ClientCity,ClientASN,ClientISP,OriginIP,OriginResponseStatus,OriginResponseTime,EdgeResponseStatus,EdgeResponseTime,EdgePathingStatus,EdgePathingSrc,EdgePathingOp,ParentRayID,EdgeRequestHost,EdgeRequestURI,EdgeRequestMethod,EdgeRequestProtocol,ClientRequestHost,ClientRequestURI,ClientRequestMethod,ClientRequestProtocol,ClientRequestScheme,ClientRequestHTTPVersionName,ClientRequestUserAgent,ClientRequestAccept,ClientRequestAcceptEncoding,ClientRequestAcceptLanguage,ClientRequestReferer,ClientRequestHeaders,EdgeResponseHeaders,OriginResponseHeaders,CacheCacheStatus,CacheResponseStatus,ClientDeviceType,ClientTCPRTT,ClientSrcPort,ClientXForwardedFor,ClientXForwardedProto,ClientXRequestedWith,EdgeColoCode,EdgeColoID,OriginSSLProtocol,OriginSSLCipher,ClientSSLProtocol,ClientSSLCipher,ClientASNDescription,ClientCountryCode,ClientRegionCode,ClientCityCode,ClientTimezone,OriginIPClass,OriginASN,OriginASNDescription,OriginCountry,OriginRegion,OriginCity,OriginTimezone,OriginColoCode,OriginColoID,ClientHTTPProtocol,ClientHTTPVersion,ClientHTTPVersionName,ClientKeepAlive,ClientRequestAcceptCharset,ClientRequestAcceptDatetime,ClientRequestAuthorization,ClientRequestCacheControl,ClientRequestConnection,ClientRequestContentLength,ClientRequestContentMD5,ClientRequestContentType,ClientRequestCookie,ClientRequestDate,ClientRequestExpect,ClientRequestFrom,ClientRequestHost,ClientRequestIfMatch,ClientRequestIfModifiedSince,ClientRequestIfNoneMatch,ClientRequestIfRange,ClientRequestIfUnmodifiedSince,ClientRequestMaxForwards,ClientRequestPragma,ClientRequestProxyAuthorization,ClientRequestRange,ClientRequestTE,ClientRequestTrailer,ClientRequestTransferEncoding,ClientRequestUpgrade,ClientRequestVia,ClientRequestWarning,ClientRequestXForwardedFor,ClientRequestXForwardedProto,ClientRequestXRequestedWith,EdgeResponseContentType,EdgeResponseContentLength,EdgeResponseContentRange,EdgeResponseContentEncoding,EdgeResponseContentLanguage,EdgeResponseContentLocation,EdgeResponseContentMD5,EdgeResponseContentDisposition,EdgeResponseCacheControl,EdgeResponseConnection,EdgeResponseDate,EdgeResponseETag,EdgeResponseExpires,EdgeResponseLastModified,EdgeResponseLocation,EdgeResponsePragma,EdgeResponseProxyAuthenticate,EdgeResponseRetryAfter,EdgeResponseServer,EdgeResponseSetCookie,EdgeResponseTrailer,EdgeResponseTransferEncoding,EdgeResponseUpgrade,EdgeResponseVary,EdgeResponseVia,EdgeResponseWarning,OriginResponseContentType,OriginResponseContentLength,OriginResponseContentRange,OriginResponseContentEncoding,OriginResponseContentLanguage,OriginResponseContentLocation,OriginResponseContentMD5,OriginResponseContentDisposition,OriginResponseCacheControl,OriginResponseConnection,OriginResponseDate,OriginResponseETag,OriginResponseExpires,OriginResponseLastModified,OriginResponseLocation,OriginResponsePragma,OriginResponseProxyAuthenticate,OriginResponseRetryAfter,OriginResponseServer,OriginResponseSetCookie,OriginResponseTrailer,OriginResponseTransferEncoding,OriginResponseUpgrade,OriginResponseVary,OriginResponseVia,OriginResponseWarning"
+    
+    # Page Rules
+    page_rules:
+      - name: "API Bypass"
+        url_pattern: "api.finainexus.com/api/*"
+        actions:
+          cache_level: "bypass"
+          edge_cache_ttl: 0
+          browser_cache_ttl: 0
+      
+      - name: "Static Assets Cache"
+        url_pattern: "*.finainexus.com/static/*"
+        actions:
+          cache_level: "cache_everything"
+          edge_cache_ttl: 31536000
+          browser_cache_ttl: 31536000
+          cache_key: "ignore_query_string"
+      
+      - name: "HTML Cache"
+        url_pattern: "*.finainexus.com/*.html"
+        actions:
+          cache_level: "cache_everything"
+          edge_cache_ttl: 3600
+          browser_cache_ttl: 1800
+          cache_key: "include_query_string"
+    
+    # Workers (Edge Computing)
+    workers:
+      - name: "finnexus-worker"
+        script: |
+          addEventListener('fetch', event => {
+            event.respondWith(handleRequest(event.request))
+          })
+          
+          async function handleRequest(request) {
+            const url = new URL(request.url)
+            
+            // Add security headers
+            const response = await fetch(request)
+            const newResponse = new Response(response.body, response)
+            
+            newResponse.headers.set('X-Frame-Options', 'DENY')
+            newResponse.headers.set('X-Content-Type-Options', 'nosniff')
+            newResponse.headers.set('X-XSS-Protection', '1; mode=block')
+            newResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+            newResponse.headers.set('Content-Security-Policy', "default-src 'self' https: data: blob: 'unsafe-inline'")
+            
+            // Add performance headers
+            newResponse.headers.set('X-DNS-Prefetch-Control', 'on')
+            newResponse.headers.set('X-Download-Options', 'noopen')
+            newResponse.headers.set('X-Permitted-Cross-Domain-Policies', 'none')
+            
+            return newResponse
+          }
+        routes:
+          - "*.finainexus.com/*"
+        environment: "production"
+    
+    # Load Balancing
+    load_balancing:
+      pools:
+        - name: "finnexus-backend-pool"
+          origins:
+            - name: "backend-us-west"
+              address: "backend-us-west.finainexus.com"
+              weight: 1
+              enabled: true
+            - name: "backend-us-east"
+              address: "backend-us-east.finainexus.com"
+              weight: 1
+              enabled: true
+          monitor:
+            type: "http"
+            path: "/health"
+            expected_codes: "200"
+            method: "GET"
+            timeout: 5
+            retries: 2
+            interval: 60
+          notification_email: "alerts@finainexus.com"
+      
+      health_checks:
+        - name: "backend-health-check"
+          type: "http"
+          path: "/health"
+          expected_codes: "200"
+          method: "GET"
+          timeout: 5
+          retries: 2
+          interval: 60
+          follow_redirects: true
+          allow_insecure: false
+          expected_body: ""
+          expected_body_regex: ""
+          header:
+            Host: ["api.finainexus.com"]
+            User-Agent: ["CloudFlare-HealthCheck/1.0"]
+    
+    # Custom Error Pages
+    custom_error_pages:
+      - code: 403
+        url: "https://finainexus.com/error/403"
+      - code: 404
+        url: "https://finainexus.com/error/404"
+      - code: 500
+        url: "https://finainexus.com/error/500"
+      - code: 502
+        url: "https://finainexus.com/error/502"
+      - code: 503
+        url: "https://finainexus.com/error/503"
+      - code: 504
+        url: "https://finainexus.com/error/504"
+    
+    # Firewall Rules
+    firewall_rules:
+      - name: "Block Bad Bots"
+        expression: "(cf.client.bot) and (not cf.client.bot in {\"googlebot\" \"bingbot\" \"slurp\" \"duckduckbot\"})"
+        action: "block"
+      
+      - name: "Rate Limit API"
+        expression: "(http.request.uri.path contains \"/api/\") and (cf.rate_limit.key eq \"${http.request.uri.path}\")"
+        action: "challenge"
+      
+      - name: "Allow Health Checks"
+        expression: "(http.request.uri.path eq \"/health\") and (ip.src eq \"173.245.48.0/20\")"
+        action: "allow"
+      
+      - name: "Block Suspicious Requests"
+        expression: "(http.request.uri.query contains \"<script\") or (http.request.uri.query contains \"javascript:\") or (http.request.uri.query contains \"onload=\")"
+        action: "block"
+
+
+

@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen } from '@testing-library/react';

@@ -1,710 +1,512 @@
 /**
- * FinAI Nexus - Synthetic Financial Avatar Service
- * 
- * Creates personalized AI financial avatars for education:
- * - Custom AI Mentors with unique personalities
- * - Gamified Learning with $NEXUS token rewards
- * - AR Integration for immersive lessons
- * - Enterprise Training for banks and institutions
- * - AI-Powered Financial Storytelling
- * - Social Trading with AI-moderated pools
+ * FinAI Nexus - Synthetic Avatar Service
+ *
+ * Advanced synthetic financial avatars with personality engines
  */
 
-import { xAIGrokAPI } from '../ai/xAIGrokAPI.js';
-import { AvatarPersonalityEngine } from './AvatarPersonalityEngine.js';
-import { GamificationEngine } from '../gamification/GamificationEngine.js';
-import { ARIntegrationService } from '../ar/ARIntegrationService.js';
-import { StorytellingEngine } from './StorytellingEngine.js';
-import { SocialTradingService } from './SocialTradingService.js';
-import { IslamicFinanceService } from './IslamicFinanceService.js';
+const databaseManager = require('../../config/database');
+const logger = require('../../utils/logger');
 
-export class SyntheticAvatarService {
+class SyntheticAvatarService {
   constructor() {
-    this.grokAPI = new xAIGrokAPI();
-    this.personalityEngine = new AvatarPersonalityEngine();
-    this.gamification = new GamificationEngine();
-    this.arIntegration = new ARIntegrationService();
-    this.storytelling = new StorytellingEngine();
-    this.socialTrading = new SocialTradingService();
-    this.islamicFinance = new IslamicFinanceService();
-    
-    this.activeAvatars = new Map();
-    this.avatarTemplates = new Map();
-    this.learningSessions = new Map();
-    this.enterpriseClients = new Map();
-    
-    this.avatarConfig = {
-      maxAvatarsPerUser: 5,
-      personalityTypes: ['conservative', 'aggressive', 'balanced', 'educational', 'mentor'],
-      voiceProfiles: ['professional', 'friendly', 'authoritative', 'encouraging', 'analytical'],
-      appearanceStyles: ['business', 'casual', 'futuristic', 'traditional', 'modern'],
-      learningModes: ['beginner', 'intermediate', 'advanced', 'expert'],
-      arEnabled: true,
-      gamificationEnabled: true,
-      storytellingEnabled: true
-    };
+    this.db = databaseManager;
+    this.avatars = new Map();
+    this.personalityEngines = new Map();
   }
 
   /**
    * Initialize synthetic avatar service
-   * @param {string} userId - User ID
-   * @param {Object} config - Configuration
-   * @returns {Promise<Object>} Initialization result
    */
-  async initializeAvatarService(userId, config = {}) {
+  async initialize() {
     try {
-      this.userId = userId;
-      this.avatarConfig = { ...this.avatarConfig, ...config };
-      
-      // Initialize components
-      await this.personalityEngine.initialize(userId, config.personality);
-      await this.gamification.initialize(userId, config.gamification);
-      await this.arIntegration.initialize(userId, config.ar);
-      await this.storytelling.initialize(userId, config.storytelling);
-      await this.socialTrading.initialize(userId, config.socialTrading);
-      await this.islamicFinance.initialize(userId, config.islamicFinance);
-      
-      // Initialize avatar templates
-      await this.initializeAvatarTemplates();
-      
-      return {
-        status: 'initialized',
-        userId: userId,
-        config: this.avatarConfig,
-        templates: Array.from(this.avatarTemplates.keys())
-      };
+      await this.loadPersonalityEngines();
+      await this.createDefaultAvatars();
+      logger.info('Synthetic avatar service initialized');
     } catch (error) {
-      console.error('Synthetic avatar service initialization failed:', error);
-      throw new Error('Failed to initialize synthetic avatar service');
+      logger.error('Error initializing synthetic avatar service:', error);
     }
   }
 
   /**
-   * Create custom AI mentor avatar
-   * @param {string} userId - User ID
-   * @param {Object} avatarSpecs - Avatar specifications
-   * @returns {Promise<Object>} Created avatar
+   * Create a new synthetic avatar
    */
-  async createCustomAvatar(userId, avatarSpecs) {
+  async createAvatar(avatarConfig) {
     try {
-      // Generate unique avatar ID
-      const avatarId = this.generateAvatarId();
-      
-      // Create personality profile
-      const personality = await this.personalityEngine.createPersonality(avatarSpecs.personality);
-      
-      // Generate voice profile
-      const voiceProfile = await this.generateVoiceProfile(avatarSpecs.voice);
-      
-      // Create appearance
-      const appearance = await this.createAvatarAppearance(avatarSpecs.appearance);
-      
-      // Initialize knowledge base
-      const knowledgeBase = await this.initializeKnowledgeBase(avatarSpecs.expertise);
-      
-      // Create avatar instance
       const avatar = {
-        id: avatarId,
-        userId: userId,
-        name: avatarSpecs.name || this.generateAvatarName(personality.type),
-        personality: personality,
-        voiceProfile: voiceProfile,
-        appearance: appearance,
-        knowledgeBase: knowledgeBase,
-        expertise: avatarSpecs.expertise || 'general_finance',
-        learningMode: avatarSpecs.learningMode || 'intermediate',
-        isActive: true,
+        id: this.generateAvatarId(),
+        name: avatarConfig.name,
+        userId: avatarConfig.userId,
+        personality: avatarConfig.personality || 'professional',
+        expertise: avatarConfig.expertise || 'general',
+        appearance: this.generateDefaultAppearance(),
+        voice: this.generateDefaultVoice(),
         createdAt: new Date(),
-        lastInteraction: new Date(),
-        stats: {
-          lessonsCompleted: 0,
-          tokensEarned: 0,
-          userRating: 0,
-          totalInteractions: 0
+        status: 'active',
+        interactions: {
+          totalInteractions: 0,
+          successfulInteractions: 0,
+          averageRating: 0
         }
       };
-      
+
+      // Initialize avatar personality
+      await this.initializeAvatarPersonality(avatar);
+
       // Store avatar
-      this.activeAvatars.set(avatarId, avatar);
-      
-      // Initialize AR integration if enabled
-      if (this.avatarConfig.arEnabled) {
-        await this.arIntegration.createAvatarAR(avatar);
-      }
-      
-      return {
-        success: true,
-        avatar: avatar,
-        arEnabled: this.avatarConfig.arEnabled,
-        timestamp: new Date()
-      };
-    } catch (error) {
-      console.error('Avatar creation failed:', error);
-      throw new Error('Failed to create custom avatar');
-    }
-  }
+      this.avatars.set(avatar.id, avatar);
+      await this.storeAvatar(avatar);
 
-  /**
-   * Start gamified learning session
-   * @param {string} userId - User ID
-   * @param {string} avatarId - Avatar ID
-   * @param {Object} lessonConfig - Lesson configuration
-   * @returns {Promise<Object>} Learning session
-   */
-  async startLearningSession(userId, avatarId, lessonConfig) {
-    try {
-      const avatar = this.activeAvatars.get(avatarId);
-      if (!avatar) {
-        throw new Error('Avatar not found');
-      }
-      
-      // Create learning session
-      const session = {
-        id: this.generateSessionId(),
-        userId: userId,
-        avatarId: avatarId,
-        avatar: avatar,
-        lessonConfig: lessonConfig,
-        startTime: new Date(),
-        isActive: true,
-        progress: 0,
-        score: 0,
-        tokensEarned: 0,
-        challenges: [],
-        interactions: []
-      };
-      
-      // Generate lesson content
-      const lessonContent = await this.generateLessonContent(avatar, lessonConfig);
-      session.lessonContent = lessonContent;
-      
-      // Create gamified challenges
-      const challenges = await this.gamification.createChallenges(lessonConfig);
-      session.challenges = challenges;
-      
-      // Initialize AR lesson if enabled
-      if (this.avatarConfig.arEnabled && lessonConfig.arEnabled) {
-        await this.arIntegration.createLessonAR(session);
-      }
-      
-      // Store session
-      this.learningSessions.set(session.id, session);
-      
-      return {
-        success: true,
-        session: session,
-        lessonContent: lessonContent,
-        challenges: challenges,
-        arEnabled: this.avatarConfig.arEnabled && lessonConfig.arEnabled,
-        timestamp: new Date()
-      };
+      return avatar;
     } catch (error) {
-      console.error('Learning session start failed:', error);
-      throw new Error('Failed to start learning session');
+      logger.error('Error creating avatar:', error);
+      throw new Error('Failed to create avatar');
     }
-  }
-
-  /**
-   * Process avatar interaction
-   * @param {string} sessionId - Session ID
-   * @param {Object} interaction - User interaction
-   * @returns {Promise<Object>} Avatar response
-   */
-  async processAvatarInteraction(sessionId, interaction) {
-    try {
-      const session = this.learningSessions.get(sessionId);
-      if (!session) {
-        throw new Error('Learning session not found');
-      }
-      
-      const avatar = session.avatar;
-      
-      // Process interaction through AI
-      const aiResponse = await this.grokAPI.generateResponse(
-        this.buildInteractionPrompt(avatar, session, interaction)
-      );
-      
-      // Generate avatar response
-      const avatarResponse = await this.generateAvatarResponse(avatar, aiResponse, interaction);
-      
-      // Update session progress
-      await this.updateSessionProgress(session, interaction, avatarResponse);
-      
-      // Check for challenge completion
-      const challengeResults = await this.checkChallengeCompletion(session, interaction);
-      
-      // Calculate tokens earned
-      const tokensEarned = await this.calculateTokensEarned(session, challengeResults);
-      
-      // Update avatar stats
-      await this.updateAvatarStats(avatar, tokensEarned);
-      
-      // Generate storytelling narrative
-      const narrative = await this.storytelling.generateNarrative(session, avatarResponse);
-      
-      return {
-        success: true,
-        avatarResponse: avatarResponse,
-        progress: session.progress,
-        score: session.score,
-        tokensEarned: tokensEarned,
-        challengeResults: challengeResults,
-        narrative: narrative,
-        timestamp: new Date()
-      };
-    } catch (error) {
-      console.error('Avatar interaction failed:', error);
-      throw new Error('Failed to process avatar interaction');
-    }
-  }
-
-  /**
-   * Create enterprise training avatar
-   * @param {string} enterpriseId - Enterprise ID
-   * @param {Object} trainingSpecs - Training specifications
-   * @returns {Promise<Object>} Enterprise avatar
-   */
-  async createEnterpriseAvatar(enterpriseId, trainingSpecs) {
-    try {
-      // Create enterprise-specific avatar
-      const avatar = await this.createCustomAvatar(enterpriseId, {
-        name: trainingSpecs.name || 'Enterprise Training Mentor',
-        personality: {
-          type: 'professional',
-          tone: 'authoritative',
-          expertise: trainingSpecs.expertise || 'compliance'
-        },
-        expertise: trainingSpecs.expertise || 'compliance',
-        learningMode: 'expert',
-        enterprise: true
-      });
-      
-      // Add enterprise-specific features
-      avatar.enterprise = {
-        enterpriseId: enterpriseId,
-        trainingModules: trainingSpecs.trainingModules || [],
-        complianceRules: trainingSpecs.complianceRules || [],
-        reportingEnabled: trainingSpecs.reportingEnabled || true,
-        analyticsEnabled: trainingSpecs.analyticsEnabled || true
-      };
-      
-      // Store enterprise client
-      this.enterpriseClients.set(enterpriseId, {
-        avatar: avatar,
-        trainingSpecs: trainingSpecs,
-        createdAt: new Date()
-      });
-      
-      return {
-        success: true,
-        avatar: avatar,
-        enterprise: avatar.enterprise,
-        timestamp: new Date()
-      };
-    } catch (error) {
-      console.error('Enterprise avatar creation failed:', error);
-      throw new Error('Failed to create enterprise avatar');
-    }
-  }
-
-  /**
-   * Generate Islamic Finance avatar
-   * @param {string} userId - User ID
-   * @param {Object} islamicSpecs - Islamic finance specifications
-   * @returns {Promise<Object>} Islamic finance avatar
-   */
-  async createIslamicFinanceAvatar(userId, islamicSpecs) {
-    try {
-      // Create Shari'ah-compliant avatar
-      const avatar = await this.createCustomAvatar(userId, {
-        name: islamicSpecs.name || 'Islamic Finance Mentor',
-        personality: {
-          type: 'traditional',
-          tone: 'respectful',
-          expertise: 'islamic_finance'
-        },
-        expertise: 'islamic_finance',
-        learningMode: islamicSpecs.learningMode || 'intermediate',
-        islamic: true
-      });
-      
-      // Add Islamic finance features
-      avatar.islamic = {
-        shariahCompliance: true,
-        halalInvestments: islamicSpecs.halalInvestments || [],
-        prohibitedActivities: islamicSpecs.prohibitedActivities || [],
-        zakatCalculation: islamicSpecs.zakatCalculation || true,
-        arabicLanguage: islamicSpecs.arabicLanguage || false
-      };
-      
-      // Initialize Islamic finance knowledge base
-      avatar.knowledgeBase.islamicFinance = await this.islamicFinance.initializeKnowledgeBase();
-      
-      return {
-        success: true,
-        avatar: avatar,
-        islamic: avatar.islamic,
-        timestamp: new Date()
-      };
-    } catch (error) {
-      console.error('Islamic finance avatar creation failed:', error);
-      throw new Error('Failed to create Islamic finance avatar');
-    }
-  }
-
-  /**
-   * Create social trading pool
-   * @param {string} userId - User ID
-   * @param {Object} poolConfig - Pool configuration
-   * @returns {Promise<Object>} Trading pool
-   */
-  async createSocialTradingPool(userId, poolConfig) {
-    try {
-      const pool = await this.socialTrading.createPool(userId, {
-        name: poolConfig.name,
-        description: poolConfig.description,
-        strategy: poolConfig.strategy,
-        riskLevel: poolConfig.riskLevel,
-        maxMembers: poolConfig.maxMembers || 100,
-        entryFee: poolConfig.entryFee || 0,
-        rewardDistribution: poolConfig.rewardDistribution || 'performance_based',
-        aiModeration: poolConfig.aiModeration || true
-      });
-      
-      // Add AI moderator avatar
-      if (poolConfig.aiModeration) {
-        const moderatorAvatar = await this.createCustomAvatar(userId, {
-          name: `${poolConfig.name} Moderator`,
-          personality: {
-            type: 'analytical',
-            tone: 'neutral',
-            expertise: 'trading_moderation'
-          },
-          expertise: 'trading_moderation',
-          learningMode: 'expert'
-        });
-        
-        pool.aiModerator = moderatorAvatar;
-      }
-      
-      return {
-        success: true,
-        pool: pool,
-        aiModerator: pool.aiModerator,
-        timestamp: new Date()
-      };
-    } catch (error) {
-      console.error('Social trading pool creation failed:', error);
-      throw new Error('Failed to create social trading pool');
-    }
-  }
-
-  /**
-   * Generate lesson content
-   * @param {Object} avatar - Avatar instance
-   * @param {Object} lessonConfig - Lesson configuration
-   * @returns {Promise<Object>} Lesson content
-   */
-  async generateLessonContent(avatar, lessonConfig) {
-    const prompt = `Create a financial lesson for ${avatar.name}, a ${avatar.personality.type} avatar with ${avatar.expertise} expertise.
-    
-    Lesson Topic: ${lessonConfig.topic}
-    Difficulty Level: ${lessonConfig.difficulty || 'intermediate'}
-    Duration: ${lessonConfig.duration || 30} minutes
-    Learning Style: ${avatar.personality.learningStyle || 'interactive'}
-    
-    Include:
-    1. Learning objectives
-    2. Key concepts with examples
-    3. Interactive exercises
-    4. Real-world applications
-    5. Assessment questions
-    6. Next steps for continued learning
-    
-    Make it engaging and personalized to the avatar's personality.`;
-    
-    const aiResponse = await this.grokAPI.generateResponse(prompt);
-    
-    return {
-      topic: lessonConfig.topic,
-      objectives: this.extractObjectives(aiResponse),
-      content: this.extractContent(aiResponse),
-      exercises: this.extractExercises(aiResponse),
-      assessment: this.extractAssessment(aiResponse),
-      duration: lessonConfig.duration || 30,
-      difficulty: lessonConfig.difficulty || 'intermediate'
-    };
   }
 
   /**
    * Generate avatar response
-   * @param {Object} avatar - Avatar instance
-   * @param {string} aiResponse - AI response
-   * @param {Object} interaction - User interaction
-   * @returns {Promise<Object>} Avatar response
    */
-  async generateAvatarResponse(avatar, aiResponse, interaction) {
+  async generateAvatarResponse(avatarId, userInput, context = {}) {
+    try {
+      const avatar = this.avatars.get(avatarId);
+      if (!avatar) {
+        throw new Error('Avatar not found');
+      }
+
+      const response = {
+        avatarId: avatarId,
+        timestamp: new Date(),
+        userInput: userInput,
+        response: '',
+        emotionalState: 'neutral',
+        confidence: 0,
+        suggestions: [],
+        actions: []
+      };
+
+      // Analyze user input
+      const inputAnalysis = await this.analyzeUserInput(userInput, context);
+
+      // Generate personality-based response
+      const personalityResponse = await this.generatePersonalityResponse(avatar, inputAnalysis);
+      response.response = personalityResponse.text;
+      response.emotionalState = personalityResponse.emotionalState;
+      response.confidence = personalityResponse.confidence;
+
+      // Generate suggestions
+      response.suggestions = await this.generateSuggestions(avatar, inputAnalysis);
+
+      // Generate actions
+      response.actions = await this.generateActions(avatar, inputAnalysis);
+
+      // Update avatar learning
+      await this.updateAvatarLearning(avatar, userInput, response);
+
+      return response;
+    } catch (error) {
+      logger.error('Error generating avatar response:', error);
+      throw new Error('Failed to generate avatar response');
+    }
+  }
+
+  /**
+   * Generate avatar personality
+   */
+  async generateAvatarPersonality(avatarId, personalityType) {
+    try {
+      const avatar = this.avatars.get(avatarId);
+      if (!avatar) {
+        throw new Error('Avatar not found');
+      }
+
+      const personality = {
+        type: personalityType,
+        traits: {},
+        communicationStyle: {},
+        expertiseAreas: []
+      };
+
+      switch (personalityType) {
+      case 'professional':
+        personality.traits = {
+          formality: 0.8,
+          expertise: 0.9,
+          patience: 0.7,
+          empathy: 0.6
+        };
+        personality.communicationStyle = {
+          tone: 'professional',
+          complexity: 'high',
+          humor: 'minimal'
+        };
+        break;
+
+      case 'friendly':
+        personality.traits = {
+          formality: 0.4,
+          expertise: 0.7,
+          patience: 0.9,
+          empathy: 0.9
+        };
+        personality.communicationStyle = {
+          tone: 'casual',
+          complexity: 'medium',
+          humor: 'moderate'
+        };
+        break;
+
+      case 'expert':
+        personality.traits = {
+          formality: 0.9,
+          expertise: 1.0,
+          patience: 0.8,
+          empathy: 0.5
+        };
+        personality.communicationStyle = {
+          tone: 'authoritative',
+          complexity: 'very_high',
+          humor: 'minimal'
+        };
+        break;
+
+      default:
+        personality.traits = {
+          formality: 0.5,
+          expertise: 0.7,
+          patience: 0.7,
+          empathy: 0.7
+        };
+        personality.communicationStyle = {
+          tone: 'balanced',
+          complexity: 'medium',
+          humor: 'moderate'
+        };
+      }
+
+      avatar.personality = personality;
+      await this.storeAvatar(avatar);
+
+      return personality;
+    } catch (error) {
+      logger.error('Error generating avatar personality:', error);
+      throw new Error('Failed to generate avatar personality');
+    }
+  }
+
+  /**
+   * Generate default appearance
+   */
+  generateDefaultAppearance() {
     return {
-      text: aiResponse,
-      voice: await this.synthesizeVoice(avatar, aiResponse),
-      emotion: this.detectEmotion(aiResponse),
-      gestures: this.generateGestures(avatar, interaction),
-      visual: this.generateVisualResponse(avatar, aiResponse),
-      personality: avatar.personality.type,
-      expertise: avatar.expertise
+      gender: 'neutral',
+      age: 'adult',
+      style: 'professional',
+      features: {
+        hair: 'short',
+        eyes: 'brown',
+        skin: 'medium'
+      },
+      clothing: {
+        style: 'business_casual',
+        colors: ['blue', 'gray', 'white']
+      }
     };
   }
 
   /**
-   * Build interaction prompt
-   * @param {Object} avatar - Avatar instance
-   * @param {Object} session - Learning session
-   * @param {Object} interaction - User interaction
-   * @returns {string} Interaction prompt
+   * Generate default voice
    */
-  buildInteractionPrompt(avatar, session, interaction) {
-    return `You are ${avatar.name}, a ${avatar.personality.type} financial mentor with ${avatar.expertise} expertise.
-    
-    Current Lesson: ${session.lessonContent.topic}
-    User's Question/Input: ${interaction.message}
-    Session Progress: ${session.progress}%
-    
-    Respond as ${avatar.name} would, maintaining the ${avatar.personality.type} personality and ${avatar.personality.tone} tone.
-    Provide helpful, educational guidance while staying in character.
-    If this is a learning session, include relevant examples and encourage continued learning.`;
+  generateDefaultVoice() {
+    return {
+      gender: 'neutral',
+      age: 'adult',
+      accent: 'neutral',
+      pitch: 'medium',
+      speed: 'normal',
+      emotion: 'calm'
+    };
   }
 
   /**
-   * Utility functions
+   * Analyze user input
+   */
+  async analyzeUserInput(userInput, context) {
+    return {
+      intent: this.extractIntent(userInput),
+      emotion: this.extractEmotion(userInput),
+      complexity: this.assessComplexity(userInput),
+      urgency: this.assessUrgency(userInput),
+      context: context
+    };
+  }
+
+  /**
+   * Generate personality-based response
+   */
+  async generatePersonalityResponse(avatar, inputAnalysis) {
+    const personality = avatar.personality;
+    const baseResponse = this.generateBaseResponse(inputAnalysis);
+
+    // Apply personality traits
+    const personalizedResponse = this.applyPersonalityTraits(baseResponse, personality);
+
+    // Apply communication style
+    const styledResponse = this.applyCommunicationStyle(personalizedResponse, personality);
+
+    return {
+      text: styledResponse.text,
+      emotionalState: styledResponse.emotionalState,
+      confidence: styledResponse.confidence
+    };
+  }
+
+  /**
+   * Generate base response
+   */
+  generateBaseResponse(inputAnalysis) {
+    const responses = {
+      greeting: [
+        'Hello! How can I help you with your financial goals today?',
+        'Hi there! I\'m here to assist you with your investment decisions.',
+        'Welcome! What financial questions can I answer for you?'
+      ],
+      question: [
+        'That\'s a great question! Let me help you understand this better.',
+        'I\'d be happy to explain that concept to you.',
+        'That\'s an important topic. Here\'s what you should know:'
+      ],
+      request: [
+        'I\'ll help you with that right away.',
+        'Let me assist you with that request.',
+        'I\'m on it! Here\'s what I can do for you:'
+      ]
+    };
+
+    const intent = inputAnalysis.intent;
+    const responseList = responses[intent] || responses.question;
+    const baseText = responseList[Math.floor(Math.random() * responseList.length)];
+
+    return {
+      text: baseText,
+      emotionalState: 'neutral',
+      confidence: 0.8
+    };
+  }
+
+  /**
+   * Apply personality traits
+   */
+  applyPersonalityTraits(response, personality) {
+    let text = response.text;
+    const traits = personality.traits;
+
+    // Apply formality
+    if (traits.formality > 0.7) {
+      text = text.replace(/Hi there!/g, 'Good day!');
+    } else if (traits.formality < 0.4) {
+      text = text.replace(/Hello!/g, 'Hey!');
+    }
+
+    // Apply empathy
+    if (traits.empathy > 0.8) {
+      text = `I completely understand how you're feeling. ${  text}`;
+    }
+
+    return {
+      ...response,
+      text: text
+    };
+  }
+
+  /**
+   * Apply communication style
+   */
+  applyCommunicationStyle(response, personality) {
+    let text = response.text;
+    const style = personality.communicationStyle;
+
+    // Apply tone
+    switch (style.tone) {
+    case 'casual':
+      text = text.replace(/Hello!/g, 'Hey!');
+      break;
+    case 'authoritative':
+      text = text.replace(/Hello!/g, 'Greetings.');
+      break;
+    case 'supportive':
+      text = text.replace(/Hello!/g, 'Hello! I\'m here to support you');
+      break;
+    }
+
+    return {
+      ...response,
+      text: text
+    };
+  }
+
+  /**
+   * Generate suggestions
+   */
+  async generateSuggestions(avatar, inputAnalysis) {
+    const suggestions = [];
+    const expertise = avatar.expertise;
+
+    switch (expertise) {
+    case 'portfolio_management':
+      suggestions.push(
+        'Consider diversifying your portfolio across different asset classes',
+        'Review your risk tolerance and adjust allocations accordingly'
+      );
+      break;
+    case 'trading':
+      suggestions.push(
+        'Set clear entry and exit points before trading',
+        'Use stop-loss orders to manage risk'
+      );
+      break;
+    case 'crypto':
+      suggestions.push(
+        'Research the project\'s fundamentals before investing',
+        'Consider dollar-cost averaging for long-term positions'
+      );
+      break;
+    default:
+      suggestions.push(
+        'Consider your financial goals and time horizon',
+        'Diversify your investments to manage risk'
+      );
+    }
+
+    return suggestions.slice(0, 3);
+  }
+
+  /**
+   * Generate actions
+   */
+  async generateActions(avatar, inputAnalysis) {
+    const actions = [];
+
+    if (inputAnalysis.intent === 'question') {
+      actions.push({
+        type: 'explain',
+        description: 'Provide detailed explanation',
+        priority: 'high'
+      });
+    }
+
+    actions.push({
+      type: 'follow_up',
+      description: 'Schedule follow-up conversation',
+      priority: 'medium'
+    });
+
+    return actions;
+  }
+
+  /**
+   * Update avatar learning
+   */
+  async updateAvatarLearning(avatar, userInput, response) {
+    avatar.interactions.totalInteractions++;
+    if (response.confidence > 0.7) {
+      avatar.interactions.successfulInteractions++;
+    }
+    await this.storeAvatar(avatar);
+  }
+
+  /**
+   * Extract intent from user input
+   */
+  extractIntent(userInput) {
+    const lowerInput = userInput.toLowerCase();
+
+    if (lowerInput.includes('hello') || lowerInput.includes('hi')) {
+      return 'greeting';
+    } else if (lowerInput.includes('?') || lowerInput.includes('what')) {
+      return 'question';
+    } else if (lowerInput.includes('help')) {
+      return 'request';
+    } else {
+      return 'statement';
+    }
+  }
+
+  /**
+   * Extract emotion from user input
+   */
+  extractEmotion(userInput) {
+    const lowerInput = userInput.toLowerCase();
+
+    if (lowerInput.includes('excited') || lowerInput.includes('great')) {
+      return 'excited';
+    } else if (lowerInput.includes('worried') || lowerInput.includes('concerned')) {
+      return 'worried';
+    } else if (lowerInput.includes('confused')) {
+      return 'confused';
+    } else {
+      return 'neutral';
+    }
+  }
+
+  /**
+   * Assess complexity of user input
+   */
+  assessComplexity(userInput) {
+    const words = userInput.split(' ').length;
+    if (words > 20) return 'high';
+    if (words > 10) return 'medium';
+    return 'low';
+  }
+
+  /**
+   * Assess urgency of user input
+   */
+  assessUrgency(userInput) {
+    const urgentKeywords = ['urgent', 'emergency', 'asap'];
+    const hasUrgentKeywords = urgentKeywords.some(keyword =>
+      userInput.toLowerCase().includes(keyword)
+    );
+    return hasUrgentKeywords ? 'high' : 'normal';
+  }
+
+  /**
+   * Initialize avatar personality
+   */
+  async initializeAvatarPersonality(avatar) {
+    const personalityType = avatar.personality || 'professional';
+    await this.generateAvatarPersonality(avatar.id, personalityType);
+  }
+
+  /**
+   * Store avatar
+   */
+  async storeAvatar(avatar) {
+    try {
+      await this.db.queryMongo(
+        'synthetic_avatars',
+        'insertOne',
+        avatar
+      );
+    } catch (error) {
+      logger.error('Error storing avatar:', error);
+    }
+  }
+
+  /**
+   * Generate avatar ID
    */
   generateAvatarId() {
-    return `avatar_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `AVATAR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  generateSessionId() {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // Placeholder methods
+  async loadPersonalityEngines() {
+    // Load personality engines
   }
 
-  generateAvatarName(personalityType) {
-    const names = {
-      conservative: ['Wise Warren', 'Prudent Patricia', 'Cautious Carl'],
-      aggressive: ['Bold Betty', 'Dynamic Dave', 'Risky Rick'],
-      balanced: ['Balanced Ben', 'Steady Sarah', 'Moderate Mike'],
-      educational: ['Professor Paul', 'Teacher Tina', 'Scholar Sam'],
-      mentor: ['Mentor Mary', 'Guide George', 'Coach Chris']
-    };
-    
-    const typeNames = names[personalityType] || names.balanced;
-    return typeNames[Math.floor(Math.random() * typeNames.length)];
-  }
-
-  async generateVoiceProfile(voiceSpecs) {
-    return {
-      voice: voiceSpecs.voice || 'professional',
-      speed: voiceSpecs.speed || 1.0,
-      pitch: voiceSpecs.pitch || 1.0,
-      emotion: voiceSpecs.emotion || 'neutral',
-      language: voiceSpecs.language || 'en-US'
-    };
-  }
-
-  async createAvatarAppearance(appearanceSpecs) {
-    return {
-      style: appearanceSpecs.style || 'business',
-      gender: appearanceSpecs.gender || 'neutral',
-      age: appearanceSpecs.age || 'adult',
-      clothing: appearanceSpecs.clothing || 'professional',
-      accessories: appearanceSpecs.accessories || [],
-      expressions: appearanceSpecs.expressions || ['friendly', 'confident']
-    };
-  }
-
-  async initializeKnowledgeBase(expertise) {
-    return {
-      expertise: expertise,
-      topics: this.getExpertiseTopics(expertise),
-      examples: this.getExpertiseExamples(expertise),
-      resources: this.getExpertiseResources(expertise),
-      lastUpdated: new Date()
-    };
-  }
-
-  getExpertiseTopics(expertise) {
-    const topics = {
-      general_finance: ['budgeting', 'investing', 'saving', 'debt_management'],
-      trading: ['technical_analysis', 'fundamental_analysis', 'risk_management', 'portfolio_diversification'],
-      compliance: ['regulatory_requirements', 'reporting', 'audit_trails', 'risk_assessment'],
-      islamic_finance: ['shariah_compliance', 'halal_investments', 'zakat_calculation', 'mudarabah']
-    };
-    
-    return topics[expertise] || topics.general_finance;
-  }
-
-  getExpertiseExamples(expertise) {
-    const examples = {
-      general_finance: ['compound_interest', 'emergency_fund', 'retirement_planning'],
-      trading: ['moving_averages', 'support_resistance', 'position_sizing'],
-      compliance: ['kyc_procedures', 'aml_checks', 'regulatory_reporting'],
-      islamic_finance: ['murabaha', 'ijara', 'musharaka']
-    };
-    
-    return examples[expertise] || examples.general_finance;
-  }
-
-  getExpertiseResources(expertise) {
-    const resources = {
-      general_finance: ['financial_planning_guide', 'investment_basics', 'budgeting_tools'],
-      trading: ['trading_strategies', 'market_analysis', 'risk_management'],
-      compliance: ['regulatory_guidelines', 'compliance_checklist', 'audit_procedures'],
-      islamic_finance: ['shariah_principles', 'halal_investments', 'islamic_banking']
-    };
-    
-    return resources[expertise] || resources.general_finance;
-  }
-
-  async initializeAvatarTemplates() {
-    const templates = [
-      {
-        id: 'conservative_mentor',
-        name: 'Conservative Mentor',
-        personality: 'conservative',
-        expertise: 'general_finance',
-        description: 'A cautious, methodical financial advisor focused on long-term stability'
-      },
-      {
-        id: 'aggressive_trader',
-        name: 'Aggressive Trader',
-        personality: 'aggressive',
-        expertise: 'trading',
-        description: 'A bold, risk-taking trader focused on high-growth opportunities'
-      },
-      {
-        id: 'compliance_expert',
-        name: 'Compliance Expert',
-        personality: 'analytical',
-        expertise: 'compliance',
-        description: 'A detail-oriented compliance specialist focused on regulatory adherence'
-      },
-      {
-        id: 'islamic_advisor',
-        name: 'Islamic Finance Advisor',
-        personality: 'traditional',
-        expertise: 'islamic_finance',
-        description: 'A knowledgeable Islamic finance expert focused on Shari\'ah compliance'
-      }
-    ];
-    
-    for (const template of templates) {
-      this.avatarTemplates.set(template.id, template);
-    }
-  }
-
-  extractObjectives(aiResponse) {
-    // Extract learning objectives from AI response
-    const objectiveMatch = aiResponse.match(/objectives?[:\s]*(.+?)(?:\n|$)/i);
-    return objectiveMatch ? objectiveMatch[1].split(',').map(obj => obj.trim()) : [];
-  }
-
-  extractContent(aiResponse) {
-    // Extract lesson content from AI response
-    return aiResponse; // Simplified for now
-  }
-
-  extractExercises(aiResponse) {
-    // Extract exercises from AI response
-    const exerciseMatch = aiResponse.match(/exercises?[:\s]*(.+?)(?:\n|$)/i);
-    return exerciseMatch ? exerciseMatch[1].split(',').map(ex => ex.trim()) : [];
-  }
-
-  extractAssessment(aiResponse) {
-    // Extract assessment questions from AI response
-    const assessmentMatch = aiResponse.match(/assessment[:\s]*(.+?)(?:\n|$)/i);
-    return assessmentMatch ? assessmentMatch[1].split(',').map(q => q.trim()) : [];
-  }
-
-  async synthesizeVoice(avatar, text) {
-    // Placeholder for voice synthesis
-    return {
-      text: text,
-      voice: avatar.voiceProfile.voice,
-      url: `voice_${Date.now()}.mp3` // Placeholder URL
-    };
-  }
-
-  detectEmotion(text) {
-    // Simple emotion detection
-    if (text.includes('!') || text.includes('excellent') || text.includes('great')) {
-      return 'excited';
-    } else if (text.includes('?') || text.includes('wonder') || text.includes('curious')) {
-      return 'curious';
-    } else if (text.includes('important') || text.includes('remember') || text.includes('note')) {
-      return 'serious';
-    }
-    return 'neutral';
-  }
-
-  generateGestures(avatar, interaction) {
-    // Generate appropriate gestures based on interaction
-    return {
-      type: 'pointing',
-      intensity: 0.5,
-      duration: 2000
-    };
-  }
-
-  generateVisualResponse(avatar, text) {
-    // Generate visual elements for the response
-    return {
-      background: 'professional',
-      animations: ['fade_in', 'highlight'],
-      colors: avatar.appearance.colors || ['blue', 'white']
-    };
-  }
-
-  async updateSessionProgress(session, interaction, avatarResponse) {
-    // Update session progress based on interaction
-    session.progress = Math.min(100, session.progress + 5);
-    session.interactions.push({
-      interaction: interaction,
-      response: avatarResponse,
-      timestamp: new Date()
-    });
-  }
-
-  async checkChallengeCompletion(session, interaction) {
-    // Check if any challenges were completed
-    const results = [];
-    for (const challenge of session.challenges) {
-      if (this.isChallengeCompleted(challenge, interaction)) {
-        results.push({
-          challengeId: challenge.id,
-          completed: true,
-          points: challenge.points
-        });
-      }
-    }
-    return results;
-  }
-
-  isChallengeCompleted(challenge, interaction) {
-    // Simple challenge completion logic
-    return interaction.message.toLowerCase().includes(challenge.keyword);
-  }
-
-  async calculateTokensEarned(session, challengeResults) {
-    let tokens = 0;
-    for (const result of challengeResults) {
-      tokens += result.points;
-    }
-    session.tokensEarned += tokens;
-    return tokens;
-  }
-
-  async updateAvatarStats(avatar, tokensEarned) {
-    avatar.stats.tokensEarned += tokensEarned;
-    avatar.stats.totalInteractions += 1;
-    avatar.lastInteraction = new Date();
+  async createDefaultAvatars() {
+    // Create default avatars
   }
 }
 
-export default SyntheticAvatarService;
+module.exports = SyntheticAvatarService;

@@ -1,0 +1,189 @@
+# FinAI Nexus - Artillery Load Testing Configuration
+# Performance testing for API endpoints
+
+config:
+  target: '{{ $processEnvironment.TARGET_URL || "http://localhost:3001" }}'
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    
+    # Ramp up phase
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 50
+      name: "Ramp up load"
+    
+    # Sustained load phase
+    - duration: 300
+      arrivalRate: 50
+      name: "Sustained load"
+    
+    # Peak load phase
+    - duration: 180
+      arrivalRate: 100
+      name: "Peak load"
+    
+    # Cool down phase
+    - duration: 60
+      arrivalRate: 10
+      name: "Cool down"
+
+  # Default payload
+  payload:
+    path: "./users.csv"
+    fields:
+      - "email"
+      - "password"
+      - "firstName"
+      - "lastName"
+
+  # Custom plugins
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+
+  # Environment variables
+  environment:
+    production:
+      target: 'https://api.finainexus.com'
+      variables:
+        baseUrl: 'https://api.finainexus.com'
+    staging:
+      target: 'https://staging-api.finainexus.com'
+      variables:
+        baseUrl: 'https://staging-api.finainexus.com'
+    local:
+      target: 'http://localhost:3001'
+      variables:
+        baseUrl: 'http://localhost:3001'
+
+scenarios:
+  # Health check scenario
+  - name: "Health Check"
+    weight: 10
+    flow:
+      - get:
+          url: "/health"
+          capture:
+            - json: "$.status"
+              as: "healthStatus"
+          expect:
+            - statusCode: 200
+            - hasProperty: "status"
+
+  # User registration scenario
+  - name: "User Registration"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/register"
+          json:
+            firstName: "{{ firstName }}"
+            lastName: "{{ lastName }}"
+            email: "{{ email }}"
+            password: "{{ password }}"
+            dateOfBirth: "1990-01-01"
+            country: "US"
+            phoneNumber: "+1234567890"
+          capture:
+            - json: "$.success"
+              as: "registrationSuccess"
+          expect:
+            - statusCode: [200, 201]
+            - hasProperty: "success"
+
+  # User login scenario
+  - name: "User Login"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+          expect:
+            - statusCode: 200
+            - hasProperty: "token"
+      
+      - get:
+          url: "/api/auth/verify"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+
+  # Educational platform endpoints
+  - name: "Educational Platform"
+    weight: 25
+    flow:
+      - get:
+          url: "/api/license-free-launch/health"
+          expect:
+            - statusCode: 200
+            - hasProperty: "health"
+      
+      - get:
+          url: "/api/license-free-launch/immediate-config"
+          expect:
+            - statusCode: 200
+            - hasProperty: "launch"
+      
+      - post:
+          url: "/api/license-free-launch/plan"
+          json:
+            launchType: "educational_platform"
+          expect:
+            - statusCode: 200
+            - hasProperty: "launchPlan"
+
+  # AI services endpoints
+  - name: "AI Services"
+    weight: 15
+    flow:
+      - get:
+          url: "/api/ai/health"
+          expect:
+            - statusCode: 200
+      
+      - post:
+          url: "/api/ai/chat"
+          json:
+            message: "Hello, I need help with financial planning"
+            userId: "test-user-123"
+          expect:
+            - statusCode: 200
+
+# Custom metrics and assertions
+afterResponse: |
+  function(requestParams, response, context, ee, next) {
+    // Log response time
+    console.log(`Response time: ${response.timings.response}ms`);
+    
+    // Custom assertions
+    if (response.statusCode >= 500) {
+      console.error(`Server error: ${response.statusCode}`);
+    }
+    
+    if (response.timings.response > 2000) {
+      console.warn(`Slow response: ${response.timings.response}ms`);
+    }
+    
+    return next();
+  }
+
+# Custom functions
+beforeRequest: |
+  function(requestParams, context, ee, next) {
+    // Add custom headers
+    requestParams.headers = requestParams.headers || {};
+    requestParams.headers['User-Agent'] = 'FinAI-Nexus-LoadTest/1.0';
+    requestParams.headers['X-Request-ID'] = Math.random().toString(36).substring(7);
+    
+    return next();
+  }
+

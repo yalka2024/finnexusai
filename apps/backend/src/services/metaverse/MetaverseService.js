@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Metaverse Service
- * 
+ *
  * Creates and manages the 3D financial metaverse where users can:
  * - Interact with AI advisors in virtual environments
  * - Visualize portfolios in 3D space
@@ -27,11 +28,11 @@ export class MetaverseService {
     this.aiAdvisor = new AIVirtualAdvisor();
     this.tradingFloor = new VirtualTradingFloor();
     this.socialRooms = new SocialTradingRooms();
-    
+
     this.activeUsers = new Map();
     this.virtualEnvironments = new Map();
     this.tradingSessions = new Map();
-    
+
     this.metaverseConfig = {
       maxUsersPerRoom: 50,
       maxRoomsPerUser: 5,
@@ -53,30 +54,30 @@ export class MetaverseService {
     try {
       // Initialize WebXR session
       const xrSession = await this.webxr.initializeSession(deviceInfo);
-      
+
       // Create 3D scene
       const scene = await this.threejs.createScene({
         userProfile: userProfile,
         deviceInfo: deviceInfo,
         metaverseConfig: this.metaverseConfig
       });
-      
+
       // Initialize spatial audio
       const audioContext = await this.spatialAudio.initializeAudio(xrSession);
-      
+
       // Create user avatar
       const userAvatar = await this.createUserAvatar(userId, userProfile);
-      
+
       // Initialize AI advisor
       const aiAdvisor = await this.aiAdvisor.createAdvisor(userProfile);
-      
+
       // Create virtual trading floor
       const tradingFloor = await this.tradingFloor.createFloor(userProfile);
-      
+
       // Initialize voice and gesture recognition
       await this.voiceProcessor.initialize(userId);
       await this.gestureRecognizer.initialize(userId);
-      
+
       // Create metaverse session
       const session = {
         userId: userId,
@@ -90,16 +91,16 @@ export class MetaverseService {
         createdAt: new Date(),
         lastActivity: new Date()
       };
-      
+
       // Store active session
       this.activeUsers.set(userId, session);
-      
+
       // Start real-time updates
       this.startRealTimeUpdates(userId);
-      
+
       return session;
     } catch (error) {
-      console.error('Metaverse initialization failed:', error);
+      logger.error('Metaverse initialization failed:', error);
       throw new Error('Failed to initialize metaverse session');
     }
   }
@@ -116,18 +117,18 @@ export class MetaverseService {
       gestures: userProfile.avatarGestures || 'natural',
       tradingStyle: userProfile.tradingStyle || 'conservative'
     };
-    
+
     const avatar = await this.threejs.createAvatar(avatarConfig);
-    
+
     // Add AI personality to avatar
     avatar.personality = await this.aiAdvisor.generateAvatarPersonality(avatarConfig);
-    
+
     // Add voice synthesis
     avatar.voice = await this.voiceProcessor.createVoiceProfile(avatarConfig.voice);
-    
+
     // Add gesture recognition
     avatar.gestures = await this.gestureRecognizer.createGestureProfile(avatarConfig.gestures);
-    
+
     return avatar;
   }
 
@@ -142,18 +143,18 @@ export class MetaverseService {
     if (!session) {
       throw new Error('User not in metaverse');
     }
-    
+
     const tradingFloor = await this.tradingFloor.enterFloor(userId, floorConfig);
-    
+
     // Add user to trading floor
     await this.tradingFloor.addUser(userId, session.userAvatar);
-    
+
     // Initialize trading floor features
     await this.initializeTradingFloorFeatures(userId, tradingFloor);
-    
+
     // Start trading floor updates
     this.startTradingFloorUpdates(userId, tradingFloor);
-    
+
     return tradingFloor;
   }
 
@@ -163,19 +164,19 @@ export class MetaverseService {
   async initializeTradingFloorFeatures(userId, tradingFloor) {
     // 3D Portfolio Visualization
     await this.createPortfolioVisualization(userId, tradingFloor);
-    
+
     // Real-time Market Data
     await this.createMarketDataVisualization(userId, tradingFloor);
-    
+
     // AI Advisor Integration
     await this.integrateAIAdvisor(userId, tradingFloor);
-    
+
     // Voice Commands
     await this.setupVoiceCommands(userId, tradingFloor);
-    
+
     // Gesture Controls
     await this.setupGestureControls(userId, tradingFloor);
-    
+
     // Social Features
     await this.setupSocialFeatures(userId, tradingFloor);
   }
@@ -185,7 +186,7 @@ export class MetaverseService {
    */
   async createPortfolioVisualization(userId, tradingFloor) {
     const portfolio = await this.getUserPortfolio(userId);
-    
+
     const visualization = {
       type: '3d_portfolio',
       assets: portfolio.assets.map(asset => ({
@@ -200,7 +201,7 @@ export class MetaverseService {
       performance: portfolio.performance,
       riskLevel: portfolio.riskLevel
     };
-    
+
     await this.threejs.createPortfolioVisualization(tradingFloor.scene, visualization);
   }
 
@@ -209,7 +210,7 @@ export class MetaverseService {
    */
   async createMarketDataVisualization(userId, tradingFloor) {
     const marketData = await this.getRealTimeMarketData();
-    
+
     const visualization = {
       type: 'market_data',
       charts: marketData.charts.map(chart => ({
@@ -232,7 +233,7 @@ export class MetaverseService {
         animation: this.getAlertAnimation(alert.priority)
       }))
     };
-    
+
     await this.threejs.createMarketDataVisualization(tradingFloor.scene, visualization);
   }
 
@@ -242,11 +243,11 @@ export class MetaverseService {
   async integrateAIAdvisor(userId, tradingFloor) {
     const session = this.activeUsers.get(userId);
     const aiAdvisor = session.aiAdvisor;
-    
+
     // Position AI advisor near user
     const advisorPosition = this.calculateAdvisorPosition(session.userAvatar.position);
     await this.threejs.positionObject(aiAdvisor.mesh, advisorPosition);
-    
+
     // Enable AI advisor interactions
     await this.aiAdvisor.enableInteractions(aiAdvisor, {
       voiceCommands: true,
@@ -254,7 +255,7 @@ export class MetaverseService {
       proximityDetection: true,
       tradingFloor: tradingFloor
     });
-    
+
     // Start AI advisor monitoring
     this.startAIAdvisorMonitoring(userId, aiAdvisor);
   }
@@ -265,47 +266,47 @@ export class MetaverseService {
   async setupVoiceCommands(userId, tradingFloor) {
     const voiceCommands = {
       // Trading commands
-      'buy {symbol} {amount}': async (symbol, amount) => {
+      'buy {symbol} {amount}': async(symbol, amount) => {
         return await this.executeTrade(userId, 'buy', symbol, amount);
       },
-      'sell {symbol} {amount}': async (symbol, amount) => {
+      'sell {symbol} {amount}': async(symbol, amount) => {
         return await this.executeTrade(userId, 'sell', symbol, amount);
       },
-      'show portfolio': async () => {
+      'show portfolio': async() => {
         return await this.showPortfolio(userId);
       },
-      'show market data': async () => {
+      'show market data': async() => {
         return await this.showMarketData(userId);
       },
-      
+
       // Navigation commands
-      'go to trading floor': async () => {
+      'go to trading floor': async() => {
         return await this.navigateToTradingFloor(userId);
       },
-      'join room {roomName}': async (roomName) => {
+      'join room {roomName}': async(roomName) => {
         return await this.joinTradingRoom(userId, roomName);
       },
-      'leave room': async () => {
+      'leave room': async() => {
         return await this.leaveTradingRoom(userId);
       },
-      
+
       // AI advisor commands
-      'ask advisor about {topic}': async (topic) => {
+      'ask advisor about {topic}': async(topic) => {
         return await this.askAIAdvisor(userId, topic);
       },
-      'get advice for {situation}': async (situation) => {
+      'get advice for {situation}': async(situation) => {
         return await this.getAIAdvice(userId, situation);
       },
-      
+
       // Social commands
-      'invite {username}': async (username) => {
+      'invite {username}': async(username) => {
         return await this.inviteUser(userId, username);
       },
-      'start group discussion': async () => {
+      'start group discussion': async() => {
         return await this.startGroupDiscussion(userId);
       }
     };
-    
+
     await this.voiceProcessor.registerCommands(userId, voiceCommands);
   }
 
@@ -315,40 +316,40 @@ export class MetaverseService {
   async setupGestureControls(userId, tradingFloor) {
     const gestures = {
       // Trading gestures
-      'point_at_asset': async (assetPosition) => {
+      'point_at_asset': async(assetPosition) => {
         return await this.selectAsset(userId, assetPosition);
       },
-      'swipe_right': async () => {
+      'swipe_right': async() => {
         return await this.nextChart(userId);
       },
-      'swipe_left': async () => {
+      'swipe_left': async() => {
         return await this.previousChart(userId);
       },
-      'pinch_zoom': async (scale) => {
+      'pinch_zoom': async(scale) => {
         return await this.zoomChart(userId, scale);
       },
-      'double_tap': async (position) => {
+      'double_tap': async(position) => {
         return await this.openAssetDetails(userId, position);
       },
-      
+
       // Navigation gestures
-      'wave_hand': async () => {
+      'wave_hand': async() => {
         return await this.attractAttention(userId);
       },
-      'thumbs_up': async () => {
+      'thumbs_up': async() => {
         return await this.approveTrade(userId);
       },
-      'thumbs_down': async () => {
+      'thumbs_down': async() => {
         return await this.rejectTrade(userId);
       },
-      'point_forward': async () => {
+      'point_forward': async() => {
         return await this.moveForward(userId);
       },
-      'point_backward': async () => {
+      'point_backward': async() => {
         return await this.moveBackward(userId);
       }
     };
-    
+
     await this.gestureRecognizer.registerGestures(userId, gestures);
   }
 
@@ -361,13 +362,13 @@ export class MetaverseService {
       range: this.metaverseConfig.voiceRange,
       tradingFloor: tradingFloor
     });
-    
+
     // Enable avatar interactions
     await this.enableAvatarInteractions(userId, tradingFloor);
-    
+
     // Enable group trading
     await this.enableGroupTrading(userId, tradingFloor);
-    
+
     // Enable social trading rooms
     await this.socialRooms.enableRooms(userId, tradingFloor);
   }
@@ -383,15 +384,15 @@ export class MetaverseService {
     if (!session) {
       throw new Error('User not in metaverse');
     }
-    
+
     const room = await this.socialRooms.joinRoom(userId, roomName, {
       userAvatar: session.userAvatar,
       tradingFloor: session.tradingFloor
     });
-    
+
     // Enable room-specific features
     await this.enableRoomFeatures(userId, room);
-    
+
     return room;
   }
 
@@ -401,13 +402,13 @@ export class MetaverseService {
   async enableRoomFeatures(userId, room) {
     // Group voice chat
     await this.spatialAudio.enableGroupChat(userId, room.id);
-    
+
     // Shared portfolio viewing
     await this.enableSharedPortfolioViewing(userId, room);
-    
+
     // Collaborative trading
     await this.enableCollaborativeTrading(userId, room);
-    
+
     // Group decision making
     await this.enableGroupDecisionMaking(userId, room);
   }
@@ -422,7 +423,7 @@ export class MetaverseService {
       if (!validation.valid) {
         throw new Error(validation.error);
       }
-      
+
       // Execute trade
       const trade = await this.tradingFloor.executeTrade(userId, {
         action: action,
@@ -431,19 +432,19 @@ export class MetaverseService {
         timestamp: new Date(),
         method: 'voice_command'
       });
-      
+
       // Update 3D visualization
       await this.updatePortfolioVisualization(userId, trade);
-      
+
       // Notify AI advisor
       await this.notifyAIAdvisor(userId, trade);
-      
+
       // Notify room members
       await this.notifyRoomMembers(userId, trade);
-      
+
       return trade;
     } catch (error) {
-      console.error('Trade execution failed:', error);
+      logger.error('Trade execution failed:', error);
       throw new Error('Failed to execute trade');
     }
   }
@@ -452,29 +453,29 @@ export class MetaverseService {
    * Start real-time updates for user
    */
   startRealTimeUpdates(userId) {
-    const updateInterval = setInterval(async () => {
+    const updateInterval = setInterval(async() => {
       try {
         const session = this.activeUsers.get(userId);
         if (!session || !session.isActive) {
           clearInterval(updateInterval);
           return;
         }
-        
+
         // Update user position
         await this.updateUserPosition(userId);
-        
+
         // Update market data
         await this.updateMarketData(userId);
-        
+
         // Update AI advisor
         await this.updateAIAdvisor(userId);
-        
+
         // Update social interactions
         await this.updateSocialInteractions(userId);
-        
+
         session.lastActivity = new Date();
       } catch (error) {
-        console.error('Real-time update failed:', error);
+        logger.error('Real-time update failed:', error);
       }
     }, 1000 / this.metaverseConfig.updateFrequency);
   }
@@ -483,28 +484,28 @@ export class MetaverseService {
    * Start trading floor updates
    */
   startTradingFloorUpdates(userId, tradingFloor) {
-    const updateInterval = setInterval(async () => {
+    const updateInterval = setInterval(async() => {
       try {
         const session = this.activeUsers.get(userId);
         if (!session || !session.isActive) {
           clearInterval(updateInterval);
           return;
         }
-        
+
         // Update portfolio visualization
         await this.updatePortfolioVisualization(userId, null);
-        
+
         // Update market data visualization
         await this.updateMarketDataVisualization(userId);
-        
+
         // Update AI advisor position
         await this.updateAIAdvisorPosition(userId);
-        
+
         // Update social room activity
         await this.updateSocialRoomActivity(userId);
-        
+
       } catch (error) {
-        console.error('Trading floor update failed:', error);
+        logger.error('Trading floor update failed:', error);
       }
     }, 1000 / this.metaverseConfig.updateFrequency);
   }

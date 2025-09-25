@@ -20,7 +20,7 @@ class FinNexusContracts {
     // Initialize provider and signer
     this.provider = new ethers.JsonRpcProvider(this.config.rpcUrl);
     this.signer = new ethers.Wallet(this.config.privateKey, this.provider);
-    
+
     // Initialize contracts
     this.initializeContracts();
   }
@@ -32,10 +32,10 @@ class FinNexusContracts {
     this.potToken = new ethers.Contract(potToken, PoTTokenABI, this.signer);
     this.deFAIManager = new ethers.Contract(deFAIManager, DeFAIManagerABI, this.signer);
 
-    console.log('✅ FinNexus contracts initialized');
-    console.log(`📄 NexusToken: ${nexusToken}`);
-    console.log(`🏆 PoTToken: ${potToken}`);
-    console.log(`🤖 DeFAIManager: ${deFAIManager}`);
+    logger.info('✅ FinNexus contracts initialized');
+    logger.info(`📄 NexusToken: ${nexusToken}`);
+    logger.info(`🏆 PoTToken: ${potToken}`);
+    logger.info(`🤖 DeFAIManager: ${deFAIManager}`);
   }
 
   // ==================== NEXUS TOKEN OPERATIONS ====================
@@ -50,7 +50,7 @@ class FinNexusContracts {
       const balance = await this.nexusToken.balanceOf(address);
       return ethers.formatEther(balance);
     } catch (error) {
-      console.error('Error getting Nexus balance:', error);
+      logger.error('Error getting Nexus balance:', error);
       throw error;
     }
   }
@@ -67,7 +67,7 @@ class FinNexusContracts {
       const receipt = await tx.wait();
       return receipt;
     } catch (error) {
-      console.error('Error transferring Nexus tokens:', error);
+      logger.error('Error transferring Nexus tokens:', error);
       throw error;
     }
   }
@@ -88,7 +88,7 @@ class FinNexusContracts {
         totalFees: ethers.formatEther(totalFees)
       };
     } catch (error) {
-      console.error('Error getting transfer fees:', error);
+      logger.error('Error getting transfer fees:', error);
       throw error;
     }
   }
@@ -105,7 +105,7 @@ class FinNexusContracts {
       const balance = await this.potToken.balanceOf(address);
       return ethers.formatEther(balance);
     } catch (error) {
-      console.error('Error getting PoT balance:', error);
+      logger.error('Error getting PoT balance:', error);
       throw error;
     }
   }
@@ -124,7 +124,7 @@ class FinNexusContracts {
         reason: trustScore.reason
       };
     } catch (error) {
-      console.error('Error getting trust score:', error);
+      logger.error('Error getting trust score:', error);
       throw error;
     }
   }
@@ -148,7 +148,7 @@ class FinNexusContracts {
       const receipt = await tx.wait();
       return receipt;
     } catch (error) {
-      console.error('Error minting PoT reward:', error);
+      logger.error('Error minting PoT reward:', error);
       throw error;
     }
   }
@@ -170,7 +170,7 @@ class FinNexusContracts {
       const receipt = await tx.wait();
       return receipt;
     } catch (error) {
-      console.error('Error applying penalty:', error);
+      logger.error('Error applying penalty:', error);
       throw error;
     }
   }
@@ -192,7 +192,7 @@ class FinNexusContracts {
       const receipt = await tx.wait();
       return receipt;
     } catch (error) {
-      console.error('Error creating portfolio:', error);
+      logger.error('Error creating portfolio:', error);
       throw error;
     }
   }
@@ -212,7 +212,7 @@ class FinNexusContracts {
         isActive: portfolio.isActive
       };
     } catch (error) {
-      console.error('Error getting portfolio:', error);
+      logger.error('Error getting portfolio:', error);
       throw error;
     }
   }
@@ -242,7 +242,7 @@ class FinNexusContracts {
       const receipt = await tx.wait();
       return receipt;
     } catch (error) {
-      console.error('Error optimizing yield:', error);
+      logger.error('Error optimizing yield:', error);
       throw error;
     }
   }
@@ -265,7 +265,7 @@ class FinNexusContracts {
         totalDeposited: ethers.formatEther(strategy.totalDeposited)
       };
     } catch (error) {
-      console.error('Error getting yield strategy:', error);
+      logger.error('Error getting yield strategy:', error);
       throw error;
     }
   }
@@ -291,7 +291,7 @@ class FinNexusContracts {
       const receipt = await tx.wait();
       return receipt;
     } catch (error) {
-      console.error('Error updating risk profile:', error);
+      logger.error('Error updating risk profile:', error);
       throw error;
     }
   }
@@ -311,7 +311,7 @@ class FinNexusContracts {
         isApproved: riskProfile.isApproved
       };
     } catch (error) {
-      console.error('Error getting risk profile:', error);
+      logger.error('Error getting risk profile:', error);
       throw error;
     }
   }
@@ -327,7 +327,7 @@ class FinNexusContracts {
       const gasPrice = await this.provider.getFeeData();
       return ethers.formatUnits(gasPrice.gasPrice, 'gwei');
     } catch (error) {
-      console.error('Error getting gas price:', error);
+      logger.error('Error getting gas price:', error);
       throw error;
     }
   }
@@ -342,7 +342,7 @@ class FinNexusContracts {
       const gasEstimate = await this.provider.estimateGas(txData);
       return gasEstimate.toString();
     } catch (error) {
-      console.error('Error estimating gas:', error);
+      logger.error('Error estimating gas:', error);
       throw error;
     }
   }
@@ -358,7 +358,7 @@ class FinNexusContracts {
       const receipt = await this.provider.waitForTransaction(txHash, confirmations);
       return receipt;
     } catch (error) {
-      console.error('Error waiting for transaction:', error);
+      logger.error('Error waiting for transaction:', error);
       throw error;
     }
   }
@@ -372,7 +372,7 @@ class FinNexusContracts {
     try {
       const tx = await this.provider.getTransaction(txHash);
       const receipt = await this.provider.getTransactionReceipt(txHash);
-      
+
       return {
         hash: tx.hash,
         from: tx.from,
@@ -386,7 +386,7 @@ class FinNexusContracts {
         confirmations: receipt ? await receipt.confirmations() : 0
       };
     } catch (error) {
-      console.error('Error getting transaction status:', error);
+      logger.error('Error getting transaction status:', error);
       throw error;
     }
   }
@@ -407,7 +407,7 @@ class FinNexusContracts {
       );
       return events;
     } catch (error) {
-      console.error('Error getting contract events:', error);
+      logger.error('Error getting contract events:', error);
       throw error;
     }
   }
@@ -419,7 +419,7 @@ class FinNexusContracts {
    * @param {Function} callback - Callback function for events
    */
   startEventMonitoring(callback) {
-    console.log('🔍 Starting event monitoring...');
+    logger.info('🔍 Starting event monitoring...');
 
     // Monitor NexusToken events
     this.nexusToken.on('Transfer', (from, to, value, event) => {
@@ -461,7 +461,7 @@ class FinNexusContracts {
    * Stop event monitoring
    */
   stopEventMonitoring() {
-    console.log('🛑 Stopping event monitoring...');
+    logger.info('🛑 Stopping event monitoring...');
     this.nexusToken.removeAllListeners();
     this.potToken.removeAllListeners();
     this.deFAIManager.removeAllListeners();

@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - AR Simulator Service
  * 
@@ -80,7 +81,7 @@ export class ARSimulatorService {
       
       return session;
     } catch (error) {
-      console.error('AR simulator initialization failed:', error);
+      logger.error('AR simulator initialization failed:', error);
       throw new Error('Failed to initialize AR simulator');
     }
   }
@@ -147,7 +148,7 @@ export class ARSimulatorService {
       
       return simulation;
     } catch (error) {
-      console.error('Portfolio simulation failed:', error);
+      logger.error('Portfolio simulation failed:', error);
       throw new Error('Failed to start portfolio simulation');
     }
   }
@@ -380,7 +381,7 @@ export class ARSimulatorService {
         
         session.lastActivity = new Date();
       } catch (error) {
-        console.error('Simulation update failed:', error);
+        logger.error('Simulation update failed:', error);
       }
     }, 1000 / this.arConfig.updateFrequency);
   }

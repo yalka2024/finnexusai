@@ -1,0 +1,17 @@
+apiVersion: v2
+name: finnexusai
+description: FinNexusAI Trading Platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - trading
+  - cryptocurrency
+  - ai
+  - blockchain
+home: https://finnexusai.com
+sources:
+  - https://github.com/finnexusai/finnexusai
+maintainers:
+  - name: FinNexusAI Team
+    email: team@finnexusai.com

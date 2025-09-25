@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Quantum Computing API
- * 
+ *
  * Interfaces with quantum computing providers:
  * - IBM Quantum Network
  * - Google Quantum AI
@@ -64,7 +65,7 @@ export class QuantumComputingAPI {
         }
       }
     };
-    
+
     this.currentProvider = null;
     this.apiKey = null;
     this.backend = null;
@@ -84,18 +85,18 @@ export class QuantumComputingAPI {
       this.backend = config.backend || 'ibmq_qasm_simulator';
       this.maxQubits = config.maxQubits || 20;
       this.maxDepth = config.maxDepth || 100;
-      
+
       // Validate provider
       if (!this.providers[this.currentProvider]) {
         throw new Error(`Unsupported quantum provider: ${this.currentProvider}`);
       }
-      
+
       // Test connection
       await this.testConnection();
-      
+
       // Get available backends
       const backends = await this.getAvailableBackends();
-      
+
       return {
         status: 'initialized',
         provider: this.currentProvider,
@@ -105,7 +106,7 @@ export class QuantumComputingAPI {
         availableBackends: backends
       };
     } catch (error) {
-      console.error('Quantum API initialization failed:', error);
+      logger.error('Quantum API initialization failed:', error);
       throw new Error('Failed to initialize quantum computing API');
     }
   }
@@ -119,19 +120,19 @@ export class QuantumComputingAPI {
   async executeCircuit(circuit, options = {}) {
     try {
       const executionId = this.generateExecutionId();
-      
+
       // Prepare circuit for execution
       const preparedCircuit = await this.prepareCircuit(circuit);
-      
+
       // Submit job to quantum provider
       const job = await this.submitJob(preparedCircuit, options);
-      
+
       // Wait for completion
       const result = await this.waitForCompletion(job.id);
-      
+
       // Process results
       const processedResult = await this.processResults(result, circuit);
-      
+
       return {
         id: executionId,
         jobId: job.id,
@@ -143,7 +144,7 @@ export class QuantumComputingAPI {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Circuit execution failed:', error);
+      logger.error('Circuit execution failed:', error);
       throw new Error('Failed to execute quantum circuit');
     }
   }
@@ -157,7 +158,7 @@ export class QuantumComputingAPI {
   async submitJob(circuit, options) {
     const provider = this.providers[this.currentProvider];
     const endpoint = `${provider.baseUrl}${provider.endpoints.jobs}`;
-    
+
     const jobData = {
       circuit: circuit,
       backend: this.backend,
@@ -166,14 +167,14 @@ export class QuantumComputingAPI {
       simulation: options.simulation || false,
       parameters: options.parameters || {}
     };
-    
+
     const response = await axios.post(endpoint, jobData, {
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json'
       }
     });
-    
+
     return response.data;
   }
 
@@ -185,10 +186,10 @@ export class QuantumComputingAPI {
   async waitForCompletion(jobId) {
     const provider = this.providers[this.currentProvider];
     const endpoint = `${provider.baseUrl}${provider.endpoints.jobs}/${jobId}`;
-    
+
     let attempts = 0;
     const maxAttempts = 60; // 5 minutes max wait
-    
+
     while (attempts < maxAttempts) {
       try {
         const response = await axios.get(endpoint, {
@@ -196,15 +197,15 @@ export class QuantumComputingAPI {
             'Authorization': `Bearer ${this.apiKey}`
           }
         });
-        
+
         const job = response.data;
-        
+
         if (job.status === 'completed') {
           return job.result;
         } else if (job.status === 'failed') {
           throw new Error(`Job failed: ${job.error}`);
         }
-        
+
         // Wait before next check
         await new Promise(resolve => setTimeout(resolve, 5000));
         attempts++;
@@ -216,7 +217,7 @@ export class QuantumComputingAPI {
         attempts++;
       }
     }
-    
+
     throw new Error('Job execution timeout');
   }
 
@@ -226,7 +227,7 @@ export class QuantumComputingAPI {
    * @param {Object} circuit - Original circuit
    * @returns {Promise<Object>} Processed result
    */
-  async processResults(result, circuit) {
+  async processResults(result, _circuit) {
     const processedResult = {
       counts: result.counts || {},
       totalShots: result.totalShots || 0,
@@ -237,12 +238,12 @@ export class QuantumComputingAPI {
       errorRates: result.errorRates || {},
       optimizationMetrics: result.optimizationMetrics || {}
     };
-    
+
     // Calculate additional metrics
     processedResult.probabilities = this.calculateProbabilities(processedResult.counts);
     processedResult.expectationValues = this.calculateExpectationValues(processedResult.counts);
     processedResult.entanglement = this.calculateEntanglement(processedResult.quantumStates);
-    
+
     return processedResult;
   }
 
@@ -254,16 +255,16 @@ export class QuantumComputingAPI {
     try {
       const provider = this.providers[this.currentProvider];
       const endpoint = `${provider.baseUrl}${provider.endpoints.backends}`;
-      
+
       const response = await axios.get(endpoint, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`
         }
       });
-      
+
       return response.data.backends || [];
     } catch (error) {
-      console.error('Failed to get available backends:', error);
+      logger.error('Failed to get available backends:', error);
       return [];
     }
   }
@@ -276,17 +277,17 @@ export class QuantumComputingAPI {
     try {
       const provider = this.providers[this.currentProvider];
       const endpoint = `${provider.baseUrl}/health`;
-      
+
       const response = await axios.get(endpoint, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`
         },
         timeout: 10000
       });
-      
+
       return response.status === 200;
     } catch (error) {
-      console.error('Quantum provider connection test failed:', error);
+      logger.error('Quantum provider connection test failed:', error);
       return false;
     }
   }
@@ -299,7 +300,7 @@ export class QuantumComputingAPI {
   async prepareCircuit(circuit) {
     // Validate circuit
     this.validateCircuit(circuit);
-    
+
     // Convert to provider-specific format
     const preparedCircuit = {
       id: circuit.id,
@@ -313,7 +314,7 @@ export class QuantumComputingAPI {
         timestamp: new Date().toISOString()
       }
     };
-    
+
     return preparedCircuit;
   }
 
@@ -328,23 +329,23 @@ export class QuantumComputingAPI {
       qubits: gate.qubits,
       parameters: gate.parameters || {}
     };
-    
+
     // Add provider-specific conversions
     switch (this.currentProvider) {
-      case 'ibm_quantum':
-        return this.convertGateForIBM(convertedGate);
-      case 'google_quantum':
-        return this.convertGateForGoogle(convertedGate);
-      case 'rigetti':
-        return this.convertGateForRigetti(convertedGate);
-      case 'ionq':
-        return this.convertGateForIonQ(convertedGate);
-      case 'aws_braket':
-        return this.convertGateForAWS(convertedGate);
-      case 'azure_quantum':
-        return this.convertGateForAzure(convertedGate);
-      default:
-        return convertedGate;
+    case 'ibm_quantum':
+      return this.convertGateForIBM(convertedGate);
+    case 'google_quantum':
+      return this.convertGateForGoogle(convertedGate);
+    case 'rigetti':
+      return this.convertGateForRigetti(convertedGate);
+    case 'ionq':
+      return this.convertGateForIonQ(convertedGate);
+    case 'aws_braket':
+      return this.convertGateForAWS(convertedGate);
+    case 'azure_quantum':
+      return this.convertGateForAzure(convertedGate);
+    default:
+      return convertedGate;
     }
   }
 
@@ -359,7 +360,7 @@ export class QuantumComputingAPI {
       qubits: gate.qubits,
       params: gate.parameters
     };
-    
+
     // Add IBM-specific gate mappings
     const gateMappings = {
       'initialize': 'initialize',
@@ -374,9 +375,9 @@ export class QuantumComputingAPI {
       'ry': 'ry',
       'rz': 'rz'
     };
-    
+
     ibmGate.name = gateMappings[gate.type] || gate.type;
-    
+
     return ibmGate;
   }
 
@@ -391,7 +392,7 @@ export class QuantumComputingAPI {
       qubits: gate.qubits,
       params: gate.parameters
     };
-    
+
     // Add Google-specific gate mappings
     const gateMappings = {
       'initialize': 'INIT',
@@ -406,9 +407,9 @@ export class QuantumComputingAPI {
       'ry': 'RY',
       'rz': 'RZ'
     };
-    
+
     googleGate.gate = gateMappings[gate.type] || gate.type;
-    
+
     return googleGate;
   }
 
@@ -423,7 +424,7 @@ export class QuantumComputingAPI {
       qubits: gate.qubits,
       params: gate.parameters
     };
-    
+
     // Add Rigetti-specific gate mappings
     const gateMappings = {
       'initialize': 'INIT',
@@ -438,9 +439,9 @@ export class QuantumComputingAPI {
       'ry': 'RY',
       'rz': 'RZ'
     };
-    
+
     rigettiGate.instruction = gateMappings[gate.type] || gate.type;
-    
+
     return rigettiGate;
   }
 
@@ -456,7 +457,7 @@ export class QuantumComputingAPI {
       control: gate.qubits[1] || null,
       params: gate.parameters
     };
-    
+
     // Add IonQ-specific gate mappings
     const gateMappings = {
       'initialize': 'INIT',
@@ -471,9 +472,9 @@ export class QuantumComputingAPI {
       'ry': 'RY',
       'rz': 'RZ'
     };
-    
+
     ionqGate.gate = gateMappings[gate.type] || gate.type;
-    
+
     return ionqGate;
   }
 
@@ -488,7 +489,7 @@ export class QuantumComputingAPI {
       qubits: gate.qubits,
       parameters: gate.parameters
     };
-    
+
     // Add AWS-specific gate mappings
     const gateMappings = {
       'initialize': 'INIT',
@@ -503,9 +504,9 @@ export class QuantumComputingAPI {
       'ry': 'RY',
       'rz': 'RZ'
     };
-    
+
     awsGate.type = gateMappings[gate.type] || gate.type;
-    
+
     return awsGate;
   }
 
@@ -520,7 +521,7 @@ export class QuantumComputingAPI {
       qubits: gate.qubits,
       parameters: gate.parameters
     };
-    
+
     // Add Azure-specific gate mappings
     const gateMappings = {
       'initialize': 'INIT',
@@ -535,9 +536,9 @@ export class QuantumComputingAPI {
       'ry': 'RY',
       'rz': 'RZ'
     };
-    
+
     azureGate.operation = gateMappings[gate.type] || gate.type;
-    
+
     return azureGate;
   }
 
@@ -550,29 +551,29 @@ export class QuantumComputingAPI {
     if (!circuit.id) {
       throw new Error('Circuit must have an ID');
     }
-    
+
     if (!circuit.qubits || circuit.qubits > this.maxQubits) {
       throw new Error(`Circuit must have 1-${this.maxQubits} qubits`);
     }
-    
+
     if (!circuit.gates || circuit.gates.length === 0) {
       throw new Error('Circuit must have at least one gate');
     }
-    
+
     if (circuit.depth > this.maxDepth) {
       throw new Error(`Circuit depth must not exceed ${this.maxDepth}`);
     }
-    
+
     // Validate gates
     for (const gate of circuit.gates) {
       if (!gate.type) {
         throw new Error('All gates must have a type');
       }
-      
+
       if (!gate.qubits || gate.qubits.length === 0) {
         throw new Error('All gates must operate on at least one qubit');
       }
-      
+
       for (const qubit of gate.qubits) {
         if (qubit < 0 || qubit >= circuit.qubits) {
           throw new Error(`Qubit ${qubit} is out of range`);
@@ -589,11 +590,11 @@ export class QuantumComputingAPI {
   calculateProbabilities(counts) {
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     const probabilities = {};
-    
+
     for (const [state, count] of Object.entries(counts)) {
       probabilities[state] = count / total;
     }
-    
+
     return probabilities;
   }
 
@@ -605,13 +606,13 @@ export class QuantumComputingAPI {
   calculateExpectationValues(counts) {
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     const expectationValues = {};
-    
+
     for (const [state, count] of Object.entries(counts)) {
       const probability = count / total;
       const value = this.calculateStateValue(state);
       expectationValues[state] = value * probability;
     }
-    
+
     return expectationValues;
   }
 
@@ -622,7 +623,7 @@ export class QuantumComputingAPI {
    */
   calculateEntanglement(quantumStates) {
     if (quantumStates.length === 0) return 0;
-    
+
     // Calculate von Neumann entropy
     let entropy = 0;
     for (const state of quantumStates) {
@@ -630,7 +631,7 @@ export class QuantumComputingAPI {
         entropy -= state.probability * Math.log2(state.probability);
       }
     }
-    
+
     return entropy;
   }
 
@@ -660,16 +661,16 @@ export class QuantumComputingAPI {
     try {
       const provider = this.providers[this.currentProvider];
       const endpoint = `${provider.baseUrl}/status`;
-      
+
       const response = await axios.get(endpoint, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`
         }
       });
-      
+
       return response.data;
     } catch (error) {
-      console.error('Failed to get provider status:', error);
+      logger.error('Failed to get provider status:', error);
       return {
         status: 'unknown',
         error: error.message
@@ -686,23 +687,23 @@ export class QuantumComputingAPI {
     try {
       const provider = this.providers[this.currentProvider];
       const endpoint = `${provider.baseUrl}${provider.endpoints.jobs}`;
-      
+
       const params = {
         limit: filters.limit || 100,
         offset: filters.offset || 0,
         status: filters.status || 'all'
       };
-      
+
       const response = await axios.get(endpoint, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`
         },
         params: params
       });
-      
+
       return response.data.jobs || [];
     } catch (error) {
-      console.error('Failed to get job history:', error);
+      logger.error('Failed to get job history:', error);
       return [];
     }
   }

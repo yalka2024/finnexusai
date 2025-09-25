@@ -1,0 +1,71 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "FinNexusAI sharia compliance",
+    "tags": [
+      "finnexusai",
+      "trading",
+      "crypto"
+    ],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "sharia compliance Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "finnexusai_${dashboardType.replace(/s+/g, '_')}_total",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "displayMode": "gradient-gauge"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "sharia compliance Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(finnexusai_${dashboardType.replace(/s+/g, '_')}_requests_total[5m])",
+            "refId": "A",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}

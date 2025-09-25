@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Gamified Learning Service
- * 
+ *
  * Implements gamified learning with $NEXUS token rewards:
  * - Complete challenges to earn $NEXUS tokens
  * - Leaderboards and achievements
@@ -25,13 +26,13 @@ export class GamifiedLearningService {
     this.achievements = new AchievementService();
     this.progressTracker = new ProgressTracker();
     this.socialLearning = new SocialLearningService();
-    
+
     this.learningSessions = new Map();
     this.challenges = new Map();
     this.achievements = new Map();
     this.leaderboards = new Map();
     this.userProgress = new Map();
-    
+
     this.gamificationConfig = {
       tokenRewardRate: 10, // $NEXUS tokens per challenge
       bonusMultiplier: 2.0, // Bonus for consecutive completions
@@ -59,7 +60,7 @@ export class GamifiedLearningService {
     try {
       this.userId = userId;
       this.gamificationConfig = { ...this.gamificationConfig, ...config };
-      
+
       // Initialize components
       await this.gamification.initialize(userId, config.gamification);
       await this.tokenRewards.initialize(userId, config.tokens);
@@ -67,13 +68,13 @@ export class GamifiedLearningService {
       await this.achievements.initialize(userId, config.achievements);
       await this.progressTracker.initialize(userId, config.progress);
       await this.socialLearning.initialize(userId, config.social);
-      
+
       // Initialize user progress
       await this.initializeUserProgress(userId);
-      
+
       // Initialize challenges
       await this.initializeChallenges();
-      
+
       return {
         status: 'initialized',
         userId: userId,
@@ -82,7 +83,7 @@ export class GamifiedLearningService {
         achievements: Array.from(this.achievements.keys())
       };
     } catch (error) {
-      console.error('Gamified learning initialization failed:', error);
+      logger.error('Gamified learning initialization failed:', error);
       throw new Error('Failed to initialize gamified learning service');
     }
   }
@@ -96,7 +97,7 @@ export class GamifiedLearningService {
   async startLearningSession(userId, sessionConfig) {
     try {
       const sessionId = this.generateSessionId();
-      
+
       // Create learning session
       const session = {
         id: sessionId,
@@ -114,22 +115,22 @@ export class GamifiedLearningService {
         socialFeatures: this.gamificationConfig.socialFeatures,
         arEnabled: this.gamificationConfig.arIntegration && sessionConfig.arEnabled
       };
-      
+
       // Generate challenges for the session
       const challenges = await this.generateChallenges(sessionConfig);
       session.challenges = challenges;
-      
+
       // Initialize progress tracking
       await this.progressTracker.startTracking(sessionId, sessionConfig);
-      
+
       // Start social learning if enabled
       if (this.gamificationConfig.socialFeatures) {
         await this.socialLearning.startSocialSession(sessionId, sessionConfig);
       }
-      
+
       // Store session
       this.learningSessions.set(sessionId, session);
-      
+
       return {
         success: true,
         session: session,
@@ -139,7 +140,7 @@ export class GamifiedLearningService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Learning session start failed:', error);
+      logger.error('Learning session start failed:', error);
       throw new Error('Failed to start learning session');
     }
   }
@@ -157,27 +158,27 @@ export class GamifiedLearningService {
       if (!session) {
         throw new Error('Learning session not found');
       }
-      
+
       const challenge = this.challenges.get(challengeId);
       if (!challenge) {
         throw new Error('Challenge not found');
       }
-      
+
       // Validate completion
       const isValid = await this.validateChallengeCompletion(challenge, completionData);
       if (!isValid) {
         throw new Error('Challenge completion is invalid');
       }
-      
+
       // Calculate score and tokens
       const score = await this.calculateChallengeScore(challenge, completionData);
       const tokens = await this.calculateTokenReward(challenge, score, session);
-      
+
       // Update session
       session.progress += challenge.progressValue;
       session.score += score;
       session.tokensEarned += tokens;
-      
+
       // Mark challenge as completed
       const completedChallenge = {
         ...challenge,
@@ -187,25 +188,25 @@ export class GamifiedLearningService {
         tokens: tokens,
         completionData: completionData
       };
-      
-      session.challenges = session.challenges.map(c => 
+
+      session.challenges = session.challenges.map(c =>
         c.id === challengeId ? completedChallenge : c
       );
-      
+
       // Update user progress
       await this.updateUserProgress(session.userId, completedChallenge);
-      
+
       // Check for achievements
       const newAchievements = await this.checkAchievements(session.userId, session);
-      
+
       // Update leaderboards
       await this.updateLeaderboards(session.userId, score, tokens);
-      
+
       // Process social features
       if (this.gamificationConfig.socialFeatures) {
         await this.socialLearning.processChallengeCompletion(sessionId, completedChallenge);
       }
-      
+
       return {
         success: true,
         challenge: completedChallenge,
@@ -218,7 +219,7 @@ export class GamifiedLearningService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Challenge completion failed:', error);
+      logger.error('Challenge completion failed:', error);
       throw new Error('Failed to complete challenge');
     }
   }
@@ -231,12 +232,12 @@ export class GamifiedLearningService {
   async generateChallenges(sessionConfig) {
     const challenges = [];
     const challengeTypes = this.getChallengeTypes(sessionConfig.topic);
-    
+
     for (const type of challengeTypes) {
       const challenge = await this.createChallenge(type, sessionConfig);
       challenges.push(challenge);
     }
-    
+
     return challenges;
   }
 
@@ -248,7 +249,7 @@ export class GamifiedLearningService {
    */
   async createChallenge(type, sessionConfig) {
     const challengeId = this.generateChallengeId();
-    
+
     const challenge = {
       id: challengeId,
       type: type,
@@ -268,10 +269,10 @@ export class GamifiedLearningService {
       socialEnabled: this.gamificationConfig.socialFeatures && this.isSocialChallenge(type),
       createdAt: new Date()
     };
-    
+
     // Store challenge
     this.challenges.set(challengeId, challenge);
-    
+
     return challenge;
   }
 
@@ -288,7 +289,7 @@ export class GamifiedLearningService {
       'compliance': ['rule_identification', 'scenario_analysis', 'report_generation', 'audit'],
       'islamic_finance': ['shariah_compliance', 'halal_verification', 'zakat_calculation', 'contract_analysis']
     };
-    
+
     return challengeTypes[topic] || ['quiz', 'simulation', 'calculation'];
   }
 
@@ -321,7 +322,7 @@ export class GamifiedLearningService {
       'zakat_calculation': `Calculate ${topic} Zakat`,
       'contract_analysis': `Analyze ${topic} Contracts`
     };
-    
+
     return titles[type] || `Complete ${topic} Challenge`;
   }
 
@@ -354,7 +355,7 @@ export class GamifiedLearningService {
       'zakat_calculation': `Calculate zakat obligations for ${topic} assets.`,
       'contract_analysis': `Analyze ${topic} contracts for compliance and risk.`
     };
-    
+
     return descriptions[type] || `Complete the ${topic} challenge.`;
   }
 
@@ -386,7 +387,7 @@ export class GamifiedLearningService {
       'zakat_calculation': 'Calculate zakat accurately for all applicable assets.',
       'contract_analysis': 'Analyze contracts for compliance and risk factors.'
     };
-    
+
     return instructions[type] || 'Complete the challenge according to the instructions.';
   }
 
@@ -418,7 +419,7 @@ export class GamifiedLearningService {
       'zakat_calculation': { minAccuracy: 98, maxAttempts: 2 },
       'contract_analysis': { minThoroughness: 90, maxAttempts: 2 }
     };
-    
+
     return criteria[type] || { minScore: 70, maxAttempts: 3 };
   }
 
@@ -451,17 +452,17 @@ export class GamifiedLearningService {
       'zakat_calculation': 14,
       'contract_analysis': 16
     };
-    
+
     const difficultyMultipliers = {
       'beginner': 1.0,
       'intermediate': 1.5,
       'advanced': 2.0,
       'expert': 2.5
     };
-    
+
     const baseValue = baseValues[type] || 10;
     const multiplier = difficultyMultipliers[difficulty] || 1.0;
-    
+
     return Math.round(baseValue * multiplier);
   }
 
@@ -494,17 +495,17 @@ export class GamifiedLearningService {
       'zakat_calculation': 70,
       'contract_analysis': 80
     };
-    
+
     const difficultyMultipliers = {
       'beginner': 1.0,
       'intermediate': 1.5,
       'advanced': 2.0,
       'expert': 2.5
     };
-    
+
     const basePointsValue = basePoints[type] || 50;
     const multiplier = difficultyMultipliers[difficulty] || 1.0;
-    
+
     return Math.round(basePointsValue * multiplier);
   }
 
@@ -537,17 +538,17 @@ export class GamifiedLearningService {
       'zakat_calculation': 14,
       'contract_analysis': 16
     };
-    
+
     const difficultyMultipliers = {
       'beginner': 1.0,
       'intermediate': 1.5,
       'advanced': 2.0,
       'expert': 2.5
     };
-    
+
     const baseTokensValue = baseTokens[type] || 10;
     const multiplier = difficultyMultipliers[difficulty] || 1.0;
-    
+
     return Math.round(baseTokensValue * multiplier);
   }
 
@@ -580,17 +581,17 @@ export class GamifiedLearningService {
       'zakat_calculation': 20,
       'contract_analysis': 35
     };
-    
+
     const difficultyMultipliers = {
       'beginner': 1.5,
       'intermediate': 1.0,
       'advanced': 0.8,
       'expert': 0.6
     };
-    
+
     const baseTimeLimit = baseTimeLimits[type] || 20;
     const multiplier = difficultyMultipliers[difficulty] || 1.0;
-    
+
     return Math.round(baseTimeLimit * multiplier);
   }
 
@@ -628,7 +629,7 @@ export class GamifiedLearningService {
         'Balance growth and stability'
       ]
     };
-    
+
     return hints[type] || [
       'Take your time to understand the requirements',
       'Use the available resources',
@@ -650,7 +651,7 @@ export class GamifiedLearningService {
       'analysis': [`${topic} data sources`, `${topic} analysis tools`, `${topic} methodology`],
       'portfolio': [`${topic} asset data`, `${topic} risk metrics`, `${topic} performance tools`]
     };
-    
+
     return resources[type] || [`${topic} guide`, `${topic} examples`, `${topic} tools`];
   }
 
@@ -707,24 +708,24 @@ export class GamifiedLearningService {
    */
   async calculateTokenReward(challenge, score, session) {
     let tokens = challenge.tokens;
-    
+
     // Apply score multiplier
     const scoreMultiplier = score / challenge.points;
     tokens = Math.round(tokens * scoreMultiplier);
-    
+
     // Apply streak bonus
     const streak = await this.getUserStreak(session.userId);
     if (streak >= this.gamificationConfig.streakThreshold) {
       tokens = Math.round(tokens * this.gamificationConfig.bonusMultiplier);
     }
-    
+
     // Apply daily limit
     const dailyTokens = await this.getDailyTokens(session.userId);
     const maxDaily = this.gamificationConfig.maxDailyRewards;
     if (dailyTokens + tokens > maxDaily) {
       tokens = Math.max(0, maxDaily - dailyTokens);
     }
-    
+
     return tokens;
   }
 
@@ -736,25 +737,25 @@ export class GamifiedLearningService {
    */
   async checkAchievements(userId, session) {
     const newAchievements = [];
-    
+
     // Check for completion achievements
     if (session.progress >= 100) {
       const achievement = await this.achievements.checkCompletionAchievement(userId, session);
       if (achievement) newAchievements.push(achievement);
     }
-    
+
     // Check for score achievements
     if (session.score >= 1000) {
       const achievement = await this.achievements.checkScoreAchievement(userId, session);
       if (achievement) newAchievements.push(achievement);
     }
-    
+
     // Check for token achievements
     if (session.tokensEarned >= 500) {
       const achievement = await this.achievements.checkTokenAchievement(userId, session);
       if (achievement) newAchievements.push(achievement);
     }
-    
+
     return newAchievements;
   }
 
@@ -773,13 +774,13 @@ export class GamifiedLearningService {
         lastActivity: new Date()
       });
     }
-    
+
     const progress = this.userProgress.get(userId);
     progress.totalChallenges += 1;
     progress.totalScore += challenge.score;
     progress.totalTokens += challenge.tokens;
     progress.lastActivity = new Date();
-    
+
     // Update streak
     const today = new Date().toDateString();
     const lastActivity = progress.lastActivity.toDateString();
@@ -872,7 +873,7 @@ export class GamifiedLearningService {
         tokens: 30
       }
     ];
-    
+
     for (const template of challengeTemplates) {
       this.challenges.set(template.id, template);
     }

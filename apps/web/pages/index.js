@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 import React from 'react';
 import Head from 'next/head';
 

@@ -1,0 +1,477 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-config
+  namespace: finnexus-production
+data:
+  vault.hcl: |
+    ui = true
+    disable_mlock = true
+    
+    storage "file" {
+      path = "/vault/file"
+    }
+    
+    listener "tcp" {
+      address = "0.0.0.0:8200"
+      tls_disable = 1
+    }
+    
+    api_addr = "http://vault-service:8200"
+    cluster_addr = "http://vault-service:8201"
+    
+    # Enable audit logging
+    audit_device "file" {
+      path = "/vault/audit/audit.log"
+    }
+    
+    # Enable metrics
+    telemetry {
+      prometheus_retention_time = "30s"
+      disable_hostname = true
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-secret
+  namespace: finnexus-production
+type: Opaque
+data:
+  vault-token: cm9vdA==  # root
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vault-data-pvc
+  namespace: finnexus-production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault
+  namespace: finnexus-production
+  labels:
+    app: vault
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+    spec:
+      containers:
+      - name: vault
+        image: vault:1.15
+        ports:
+        - containerPort: 8200
+          name: http
+        - containerPort: 8201
+          name: https-internal
+        env:
+        - name: VAULT_DEV_ROOT_TOKEN_ID
+          value: "root"
+        - name: VAULT_DEV_LISTEN_ADDRESS
+          value: "0.0.0.0:8200"
+        - name: VAULT_ADDR
+          value: "http://localhost:8200"
+        - name: VAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: vault-secret
+              key: vault-token
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Initialize Vault
+          vault server -config=/vault/config/vault.hcl &
+          sleep 10
+          
+          # Initialize Vault (only if not already initialized)
+          if ! vault status; then
+            vault operator init -key-shares=5 -key-threshold=3 > /vault/init.txt
+          fi
+          
+          # Unseal Vault (in production, use proper unsealing)
+          vault operator unseal $(grep "Unseal Key 1" /vault/init.txt | cut -d' ' -f4)
+          vault operator unseal $(grep "Unseal Key 2" /vault/init.txt | cut -d' ' -f4)
+          vault operator unseal $(grep "Unseal Key 3" /vault/init.txt | cut -d' ' -f4)
+          
+          # Enable KV secrets engine
+          vault secrets enable -path=finnexus kv-v2
+          
+          # Enable database secrets engine
+          vault secrets enable database
+          
+          # Enable PKI secrets engine
+          vault secrets enable pki
+          
+          # Configure PKI
+          vault write -field=certificate pki/root/generate/internal \
+            common_name="FinNexus Root CA" \
+            ttl=87600h > /vault/pki/ca.crt
+          
+          vault write pki/config/urls \
+            issuing_certificates="http://vault-service:8200/v1/pki/ca" \
+            crl_distribution_points="http://vault-service:8200/v1/pki/crl"
+          
+          vault write pki/roles/finnexus \
+            allowed_domains="finnexus.com,finainexus.com" \
+            allow_subdomains=true \
+            max_ttl=720h
+          
+          # Create policies
+          vault policy write finnexus-app - <<EOF
+          path "finnexus/data/*" {
+            capabilities = ["read"]
+          }
+          path "database/creds/finnexus" {
+            capabilities = ["read"]
+          }
+          path "pki/issue/finnexus" {
+            capabilities = ["create", "update"]
+          }
+          EOF
+          
+          # Create token for application
+          vault token create -policy=finnexus-app -ttl=24h > /vault/app-token.txt
+          
+          # Keep container running
+          wait
+        volumeMounts:
+        - name: vault-config
+          mountPath: /vault/config
+        - name: vault-data
+          mountPath: /vault/file
+        - name: vault-init
+          mountPath: /vault/init.txt
+          subPath: init.txt
+        - name: vault-pki
+          mountPath: /vault/pki
+        - name: vault-audit
+          mountPath: /vault/audit
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /v1/sys/health
+            port: 8200
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v1/sys/health
+            port: 8200
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: vault-config
+        configMap:
+          name: vault-config
+      - name: vault-data
+        persistentVolumeClaim:
+          claimName: vault-data-pvc
+      - name: vault-init
+        emptyDir: {}
+      - name: vault-pki
+        emptyDir: {}
+      - name: vault-audit
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-service
+  namespace: finnexus-production
+  labels:
+    app: vault
+spec:
+  ports:
+  - port: 8200
+    targetPort: 8200
+    name: http
+  - port: 8201
+    targetPort: 8201
+    name: https-internal
+  selector:
+    app: vault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-external
+  namespace: finnexus-production
+  labels:
+    app: vault
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8200
+    targetPort: 8200
+    name: http
+  selector:
+    app: vault
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: finnexus-production
+spec:
+  template:
+    spec:
+      containers:
+      - name: vault-init
+        image: vault:1.15
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Wait for Vault to be ready
+          sleep 30
+          
+          # Check if Vault is initialized
+          if ! vault status; then
+            echo "Initializing Vault..."
+            vault operator init -key-shares=5 -key-threshold=3 > /vault/init.txt
+            
+            # Unseal Vault
+            vault operator unseal $(grep "Unseal Key 1" /vault/init.txt | cut -d' ' -f4)
+            vault operator unseal $(grep "Unseal Key 2" /vault/init.txt | cut -d' ' -f4)
+            vault operator unseal $(grep "Unseal Key 3" /vault/init.txt | cut -d' ' -f4)
+          fi
+          
+          # Enable KV secrets engine
+          vault secrets enable -path=finnexus kv-v2
+          
+          # Store application secrets
+          vault kv put finnexus/database \
+            host="postgres-primary-service" \
+            port="5432" \
+            database="finnexusai" \
+            username="postgres" \
+            password="password123"
+          
+          vault kv put finnexus/redis \
+            host="redis-cluster-external" \
+            port="6379" \
+            password="finnexus-redis-password-2024"
+          
+          vault kv put finnexus/jwt \
+            secret="finnexus-jwt-secret-key-2024" \
+            expiration="24h"
+          
+          vault kv put finnexus/external-apis \
+            openai_key="your-openai-api-key" \
+            grok_key="your-grok-api-key" \
+            sentry_dsn="your-sentry-dsn"
+          
+          # Enable database secrets engine
+          vault secrets enable database
+          
+          # Configure database connection
+          vault write database/config/postgres \
+            plugin_name=postgresql-database-plugin \
+            connection_url="postgresql://postgres:password123@postgres-primary-service:5432/finnexusai" \
+            allowed_roles="finnexus"
+          
+          # Create database role
+          vault write database/roles/finnexus \
+            db_name=postgres \
+            creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';" \
+            default_ttl="1h" \
+            max_ttl="24h"
+          
+          # Enable PKI secrets engine
+          vault secrets enable pki
+          
+          # Configure PKI
+          vault write -field=certificate pki/root/generate/internal \
+            common_name="FinNexus Root CA" \
+            ttl=87600h > /vault/pki/ca.crt
+          
+          vault write pki/config/urls \
+            issuing_certificates="http://vault-service:8200/v1/pki/ca" \
+            crl_distribution_points="http://vault-service:8200/v1/pki/crl"
+          
+          vault write pki/roles/finnexus \
+            allowed_domains="finnexus.com,finainexus.com" \
+            allow_subdomains=true \
+            max_ttl=720h
+          
+          # Create policies
+          vault policy write finnexus-app - <<EOF
+          path "finnexus/data/*" {
+            capabilities = ["read"]
+          }
+          path "database/creds/finnexus" {
+            capabilities = ["read"]
+          }
+          path "pki/issue/finnexus" {
+            capabilities = ["create", "update"]
+          }
+          EOF
+          
+          # Create token for application
+          vault token create -policy=finnexus-app -ttl=24h > /vault/app-token.txt
+          
+          echo "Vault initialization completed successfully!"
+        env:
+        - name: VAULT_ADDR
+          value: "http://vault-service:8200"
+        - name: VAULT_TOKEN
+          value: "root"
+      restartPolicy: OnFailure
+  backoffLimit: 3
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-agent-config
+  namespace: finnexus-production
+data:
+  agent.hcl: |
+    pid_file = "/tmp/pidfile"
+    
+    auto_auth {
+      method "kubernetes" {
+        mount_path = "auth/kubernetes"
+        config = {
+          role = "finnexus-app"
+        }
+      }
+      
+      sink "file" {
+        config = {
+          path = "/vault/secrets/token"
+        }
+      }
+    }
+    
+    template {
+      source = "/vault/configs/database.tpl"
+      destination = "/vault/secrets/database.conf"
+    }
+    
+    template {
+      source = "/vault/configs/redis.tpl"
+      destination = "/vault/secrets/redis.conf"
+    }
+    
+    vault {
+      address = "http://vault-service:8200"
+    }
+  
+  database.tpl: |
+    {{- with secret "finnexus/database" -}}
+    POSTGRES_HOST={{ .Data.data.host }}
+    POSTGRES_PORT={{ .Data.data.port }}
+    POSTGRES_DB={{ .Data.data.database }}
+    POSTGRES_USER={{ .Data.data.username }}
+    POSTGRES_PASSWORD={{ .Data.data.password }}
+    {{- end -}}
+  
+  redis.tpl: |
+    {{- with secret "finnexus/redis" -}}
+    REDIS_HOST={{ .Data.data.host }}
+    REDIS_PORT={{ .Data.data.port }}
+    REDIS_PASSWORD={{ .Data.data.password }}
+    {{- end -}}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: vault-agent
+  namespace: finnexus-production
+  labels:
+    app: vault-agent
+spec:
+  selector:
+    matchLabels:
+      app: vault-agent
+  template:
+    metadata:
+      labels:
+        app: vault-agent
+    spec:
+      serviceAccountName: vault-agent
+      containers:
+      - name: vault-agent
+        image: vault:1.15
+        command:
+        - /bin/sh
+        - -c
+        - |
+          vault agent -config=/vault/configs/agent.hcl &
+          wait
+        volumeMounts:
+        - name: vault-configs
+          mountPath: /vault/configs
+        - name: vault-secrets
+          mountPath: /vault/secrets
+        env:
+        - name: VAULT_ADDR
+          value: "http://vault-service:8200"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      volumes:
+      - name: vault-configs
+        configMap:
+          name: vault-agent-config
+      - name: vault-secrets
+        emptyDir: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-agent
+  namespace: finnexus-production
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vault-agent
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vault-agent
+subjects:
+- kind: ServiceAccount
+  name: vault-agent
+  namespace: finnexus-production
+
+
+

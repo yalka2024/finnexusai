@@ -1,0 +1,374 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: siem-config
+  namespace: finnexus-production
+data:
+  elasticsearch.yml: |
+    cluster.name: "finnexus-siem"
+    node.name: "elasticsearch-0"
+    network.host: "0.0.0.0"
+    discovery.seed_hosts: ["elasticsearch-0.elasticsearch-service", "elasticsearch-1.elasticsearch-service", "elasticsearch-2.elasticsearch-service"]
+    cluster.initial_master_nodes: ["elasticsearch-0", "elasticsearch-1", "elasticsearch-2"]
+    xpack.security.enabled: true
+    xpack.security.transport.ssl.enabled: true
+    xpack.security.transport.ssl.verification_mode: certificate
+    xpack.security.transport.ssl.key: /usr/share/elasticsearch/config/certificates/elasticsearch.key
+    xpack.security.transport.ssl.certificate: /usr/share/elasticsearch/config/certificates/elasticsearch.crt
+    xpack.security.transport.ssl.certificate_authorities: /usr/share/elasticsearch/config/certificates/ca.crt
+  
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+      tcp {
+        port => 5000
+      }
+    }
+    
+    filter {
+      if [fields][service] == "backend" {
+        grok {
+          match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:level} %{GREEDYDATA:message}" }
+        }
+        date {
+          match => [ "timestamp", "ISO8601" ]
+        }
+      }
+      
+      if [fields][service] == "nginx" {
+        grok {
+          match => { "message" => "%{NGINXACCESS}" }
+        }
+      }
+    }
+    
+    output {
+      elasticsearch {
+        hosts => ["elasticsearch-service:9200"]
+        index => "finnexus-logs-%{+YYYY.MM.dd}"
+      }
+    }
+  
+  kibana.yml: |
+    server.name: "kibana"
+    server.host: "0.0.0.0"
+    elasticsearch.hosts: ["http://elasticsearch-service:9200"]
+    xpack.security.enabled: true
+    xpack.encryptedSavedObjects.encryptionKey: "finnexus-kibana-encryption-key-2024"
+  
+  filebeat.yml: |
+    filebeat.inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/nginx/access.log
+        - /var/log/nginx/error.log
+      fields:
+        service: nginx
+      fields_under_root: true
+    
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/backend/*.log
+      fields:
+        service: backend
+      fields_under_root: true
+    
+    output.logstash:
+      hosts: ["logstash-service:5044"]
+    
+    processors:
+    - add_host_metadata:
+        when.not.contains.tags: forwarded
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: siem-secret
+  namespace: finnexus-production
+type: Opaque
+data:
+  elasticsearch-password: ZWxhc3RpY3Bhc3N3b3Jk  # elasticpassword
+  kibana-password: a2liYW5hcGFzc3dvcmQ=  # kibanapassword
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: finnexus-production
+spec:
+  serviceName: elasticsearch-service
+  replicas: 3
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+      - name: elasticsearch
+        image: elasticsearch:8.11.0
+        ports:
+        - containerPort: 9200
+          name: http
+        - containerPort: 9300
+          name: transport
+        env:
+        - name: ES_JAVA_OPTS
+          value: "-Xms1g -Xmx1g"
+        - name: ELASTIC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: siem-secret
+              key: elasticsearch-password
+        - name: KIBANA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: siem-secret
+              key: kibana-password
+        volumeMounts:
+        - name: elasticsearch-data
+          mountPath: /usr/share/elasticsearch/data
+        - name: elasticsearch-config
+          mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+          subPath: elasticsearch.yml
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9200
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 9200
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: elasticsearch-config
+        configMap:
+          name: siem-config
+  volumeClaimTemplates:
+  - metadata:
+      name: elasticsearch-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 50Gi
+      storageClassName: fast-ssd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-service
+  namespace: finnexus-production
+spec:
+  ports:
+  - port: 9200
+    targetPort: 9200
+    name: http
+  - port: 9300
+    targetPort: 9300
+    name: transport
+  selector:
+    app: elasticsearch
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logstash
+  namespace: finnexus-production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: logstash
+  template:
+    metadata:
+      labels:
+        app: logstash
+    spec:
+      containers:
+      - name: logstash
+        image: logstash:8.11.0
+        ports:
+        - containerPort: 5044
+          name: beats
+        - containerPort: 5000
+          name: tcp
+        volumeMounts:
+        - name: logstash-config
+          mountPath: /usr/share/logstash/pipeline/logstash.conf
+          subPath: logstash.conf
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "500m"
+        livenessProbe:
+          tcpSocket:
+            port: 5044
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 5044
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: logstash-config
+        configMap:
+          name: siem-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: logstash-service
+  namespace: finnexus-production
+spec:
+  ports:
+  - port: 5044
+    targetPort: 5044
+    name: beats
+  - port: 5000
+    targetPort: 5000
+    name: tcp
+  selector:
+    app: logstash
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: finnexus-production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+      - name: kibana
+        image: kibana:8.11.0
+        ports:
+        - containerPort: 5601
+          name: http
+        env:
+        - name: ELASTICSEARCH_HOSTS
+          value: "http://elasticsearch-service:9200"
+        - name: ELASTICSEARCH_USERNAME
+          value: "kibana_system"
+        - name: ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: siem-secret
+              key: kibana-password
+        volumeMounts:
+        - name: kibana-config
+          mountPath: /usr/share/kibana/config/kibana.yml
+          subPath: kibana.yml
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: kibana-config
+        configMap:
+          name: siem-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana-service
+  namespace: finnexus-production
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 5601
+    targetPort: 5601
+    name: http
+  selector:
+    app: kibana
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+  namespace: finnexus-production
+spec:
+  selector:
+    matchLabels:
+      app: filebeat
+  template:
+    metadata:
+      labels:
+        app: filebeat
+    spec:
+      containers:
+      - name: filebeat
+        image: elastic/filebeat:8.11.0
+        volumeMounts:
+        - name: filebeat-config
+          mountPath: /usr/share/filebeat/filebeat.yml
+          subPath: filebeat.yml
+        - name: var-logs
+          mountPath: /var/log
+          readOnly: true
+        - name: var-lib
+          mountPath: /var/lib/filebeat
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      volumes:
+      - name: filebeat-config
+        configMap:
+          name: siem-config
+      - name: var-logs
+        hostPath:
+          path: /var/log
+      - name: var-lib
+        hostPath:
+          path: /var/lib/filebeat
+      tolerations:
+      - operator: Exists
+
+
+

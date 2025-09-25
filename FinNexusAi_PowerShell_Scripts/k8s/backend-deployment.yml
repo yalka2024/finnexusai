@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finai-backend
+  namespace: finainexus
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: finai-backend
+  template:
+    metadata:
+      labels:
+        app: finai-backend
+    spec:
+      containers:
+      - name: finai-backend
+        image: finainexus/backend:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: finai-secrets
+              key: db-url
+        - name: X_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: finai-secrets
+              key: x-api-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finai-backend
+  namespace: finainexus
+spec:
+  selector:
+    app: finai-backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+  type: LoadBalancer

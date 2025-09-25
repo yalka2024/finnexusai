@@ -1,0 +1,252 @@
+2025-09-21 14:33:09:339 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 14:33:09:339 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 14:33:09:339 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 16:19:34:1934 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 16:19:35:1935 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 16:19:36:1936 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 16:19:36:1936 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 16:19:36:1936 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 16:19:59:1959 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 16:20:29:2029 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 17:56:59:5659 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 17:56:59:5659 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 17:56:59:5659 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+2025-09-21 17:56:59:5659 [31merror[39m: [31muncaughtException: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31mError: Cannot find module '../audit/AuditService'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js[39m
+[31m- C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\app.js[39m
+[31m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1051:27)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m
+[31m    at require (node:internal/modules/helpers:179:18)[39m
+[31m    at Object.<anonymous> (C:\Users\yanp0\OneDrive\Documentos\proyectos\FinNexusAi\apps\backend\src\services\trading\TradingEngine.js:12:22)[39m
+[31m    at Module._compile (node:internal/modules/cjs/loader:1469:14)[39m
+[31m    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1288:32)[39m
+[31m    at Module._load (node:internal/modules/cjs/loader:1104:12)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1311:19)[39m

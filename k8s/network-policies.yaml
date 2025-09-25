@@ -1,0 +1,120 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: finnexus-backend-netpol
+  namespace: finnexus-production
+spec:
+  podSelector:
+    matchLabels:
+      app: finnexus-backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: finnexus-production
+    - podSelector:
+        matchLabels:
+          app: finnexus-frontend
+    - podSelector:
+        matchLabels:
+          app: finnexus-ingress
+    ports:
+    - protocol: TCP
+      port: 3001
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: finnexus-databases
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 27017 # MongoDB
+    - protocol: TCP
+      port: 6379  # Redis
+  - to: []  # Allow external API calls
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: finnexus-frontend-netpol
+  namespace: finnexus-production
+spec:
+  podSelector:
+    matchLabels:
+      app: finnexus-frontend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: finnexus-production
+    - podSelector:
+        matchLabels:
+          app: finnexus-ingress
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: finnexus-backend
+    ports:
+    - protocol: TCP
+      port: 3001
+  - to: []  # Allow external API calls
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: finnexus-databases-netpol
+  namespace: finnexus-databases
+spec:
+  podSelector:
+    matchLabels:
+      app: finnexus-database
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: finnexus-production
+    - podSelector:
+        matchLabels:
+          app: finnexus-backend
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 27017 # MongoDB
+    - protocol: TCP
+      port: 6379  # Redis
+  egress:
+  - to: []  # Allow external connections for replication
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+
+
+

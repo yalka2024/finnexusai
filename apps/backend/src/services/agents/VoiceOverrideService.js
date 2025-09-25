@@ -1,6 +1,7 @@
+const logger = require('../../utils/logger');
 /**
  * FinAI Nexus - Voice Override Service
- * 
+ *
  * Natural language control for autonomous agents:
  * - Voice command interpretation
  * - Agent coordination through voice
@@ -21,11 +22,11 @@ export class VoiceOverrideService {
     this.commandParser = new CommandParser();
     this.coordinator = null;
     this.agents = [];
-    
+
     this.voiceCommands = new Map();
     this.commandHistory = [];
     this.learningData = [];
-    
+
     this.voiceConfig = {
       confidenceThreshold: 0.8,
       maxCommandLength: 100,
@@ -53,19 +54,19 @@ export class VoiceOverrideService {
       this.coordinator = config.coordinator;
       this.agents = config.agents || [];
       this.voiceConfig = { ...this.voiceConfig, ...config.voiceConfig };
-      
+
       // Initialize voice processor
       await this.voiceProcessor.initialize(userId, config.voiceProcessor);
-      
+
       // Initialize command parser
       await this.commandParser.initialize(userId, config.commandParser);
-      
+
       // Initialize voice commands
       await this.initializeVoiceCommands();
-      
+
       // Start voice monitoring
       this.startVoiceMonitoring();
-      
+
       return {
         status: 'initialized',
         userId: userId,
@@ -73,7 +74,7 @@ export class VoiceOverrideService {
         commands: Array.from(this.voiceCommands.keys())
       };
     } catch (error) {
-      console.error('Voice override initialization failed:', error);
+      logger.error('Voice override initialization failed:', error);
       throw new Error('Failed to initialize voice override service');
     }
   }
@@ -90,22 +91,22 @@ export class VoiceOverrideService {
       if (!command || command.length > this.voiceConfig.maxCommandLength) {
         throw new Error('Invalid command length');
       }
-      
+
       // Process voice command
       const processedCommand = await this.voiceProcessor.processCommand(command);
-      
+
       // Parse command
       const parsedCommand = await this.commandParser.parseCommand(processedCommand);
-      
+
       // Determine priority
       const priority = this.determinePriority(parsedCommand);
-      
+
       // Check for emergency commands
       const isEmergency = this.isEmergencyCommand(parsedCommand);
-      
+
       // Execute command
       const executionResult = await this.executeCommand(parsedCommand, priority, isEmergency);
-      
+
       // Store command history
       this.commandHistory.push({
         userId: userId,
@@ -117,12 +118,12 @@ export class VoiceOverrideService {
         executionResult: executionResult,
         timestamp: new Date()
       });
-      
+
       // Update learning data
       if (this.voiceConfig.learningEnabled) {
         await this.updateLearningData(parsedCommand, executionResult);
       }
-      
+
       return {
         success: true,
         command: command,
@@ -134,7 +135,7 @@ export class VoiceOverrideService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Voice command processing failed:', error);
+      logger.error('Voice command processing failed:', error);
       throw new Error('Failed to process voice command');
     }
   }
@@ -149,26 +150,26 @@ export class VoiceOverrideService {
   async executeCommand(parsedCommand, priority, isEmergency) {
     try {
       const { agent, action, parameters } = parsedCommand;
-      
+
       // Handle emergency commands
       if (isEmergency) {
         return await this.handleEmergencyCommand(parsedCommand);
       }
-      
+
       // Route to appropriate agent
       const agentInstance = this.findAgent(agent);
       if (!agentInstance) {
         throw new Error(`Agent not found: ${agent}`);
       }
-      
+
       // Execute command with priority
       const executionResult = await agentInstance.executeCommand(action, parameters);
-      
+
       // Coordinate with other agents if needed
       if (this.coordinator && parsedCommand.coordination) {
         await this.coordinator.coordinateCommand(agent, action, parameters, executionResult);
       }
-      
+
       return {
         success: true,
         agent: agent,
@@ -179,7 +180,7 @@ export class VoiceOverrideService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Command execution failed:', error);
+      logger.error('Command execution failed:', error);
       throw new Error('Failed to execute command');
     }
   }
@@ -192,21 +193,21 @@ export class VoiceOverrideService {
   async handleEmergencyCommand(parsedCommand) {
     try {
       const { action } = parsedCommand;
-      
+
       switch (action) {
-        case 'stop_all':
-          return await this.stopAllAgents();
-        case 'pause_all':
-          return await this.pauseAllAgents();
-        case 'emergency_sell':
-          return await this.emergencySell();
-        case 'emergency_rebalance':
-          return await this.emergencyRebalance();
-        default:
-          throw new Error(`Unknown emergency action: ${action}`);
+      case 'stop_all':
+        return await this.stopAllAgents();
+      case 'pause_all':
+        return await this.pauseAllAgents();
+      case 'emergency_sell':
+        return await this.emergencySell();
+      case 'emergency_rebalance':
+        return await this.emergencyRebalance();
+      default:
+        throw new Error(`Unknown emergency action: ${action}`);
       }
     } catch (error) {
-      console.error('Emergency command handling failed:', error);
+      logger.error('Emergency command handling failed:', error);
       throw new Error('Failed to handle emergency command');
     }
   }
@@ -217,7 +218,7 @@ export class VoiceOverrideService {
    */
   async stopAllAgents() {
     const results = [];
-    
+
     for (const agent of this.agents) {
       try {
         const result = await agent.stop();
@@ -226,7 +227,7 @@ export class VoiceOverrideService {
         results.push({ agent: agent.constructor.name, error: error.message });
       }
     }
-    
+
     return {
       success: true,
       action: 'stop_all',
@@ -241,7 +242,7 @@ export class VoiceOverrideService {
    */
   async pauseAllAgents() {
     const results = [];
-    
+
     for (const agent of this.agents) {
       try {
         const result = await agent.pause();
@@ -250,7 +251,7 @@ export class VoiceOverrideService {
         results.push({ agent: agent.constructor.name, error: error.message });
       }
     }
-    
+
     return {
       success: true,
       action: 'pause_all',
@@ -269,9 +270,9 @@ export class VoiceOverrideService {
       if (!tradeAgent) {
         throw new Error('Trade agent not found');
       }
-      
+
       const result = await tradeAgent.emergencySell();
-      
+
       return {
         success: true,
         action: 'emergency_sell',
@@ -279,7 +280,7 @@ export class VoiceOverrideService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Emergency sell failed:', error);
+      logger.error('Emergency sell failed:', error);
       throw new Error('Failed to execute emergency sell');
     }
   }
@@ -294,9 +295,9 @@ export class VoiceOverrideService {
       if (!portfolioAgent) {
         throw new Error('Portfolio agent not found');
       }
-      
+
       const result = await portfolioAgent.emergencyRebalance();
-      
+
       return {
         success: true,
         action: 'emergency_rebalance',
@@ -304,7 +305,7 @@ export class VoiceOverrideService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Emergency rebalance failed:', error);
+      logger.error('Emergency rebalance failed:', error);
       throw new Error('Failed to execute emergency rebalance');
     }
   }
@@ -321,7 +322,7 @@ export class VoiceOverrideService {
       { command: 'change strategy to {strategy}', agent: 'portfolio', action: 'change_strategy' },
       { command: 'pause portfolio management', agent: 'portfolio', action: 'pause_management' },
       { command: 'resume portfolio management', agent: 'portfolio', action: 'resume_management' },
-      
+
       // Trading commands
       { command: 'buy {asset} {amount}', agent: 'trade', action: 'buy' },
       { command: 'sell {asset} {amount}', agent: 'trade', action: 'sell' },
@@ -329,20 +330,20 @@ export class VoiceOverrideService {
       { command: 'cancel trade {tradeId}', agent: 'trade', action: 'cancel_trade' },
       { command: 'pause trading', agent: 'trade', action: 'pause_trading' },
       { command: 'resume trading', agent: 'trade', action: 'resume_trading' },
-      
+
       // Compliance commands
       { command: 'check compliance', agent: 'compliance', action: 'check_compliance' },
       { command: 'generate report', agent: 'compliance', action: 'generate_report' },
       { command: 'update rules', agent: 'compliance', action: 'update_rules' },
       { command: 'pause compliance monitoring', agent: 'compliance', action: 'pause_monitoring' },
       { command: 'resume compliance monitoring', agent: 'compliance', action: 'resume_monitoring' },
-      
+
       // Yield commands
       { command: 'optimize yield', agent: 'yield', action: 'optimize_yield' },
       { command: 'start yield farming', agent: 'yield', action: 'start_farming' },
       { command: 'stop yield farming', agent: 'yield', action: 'stop_farming' },
       { command: 'change yield strategy', agent: 'yield', action: 'change_strategy' },
-      
+
       // System commands
       { command: 'stop all agents', agent: 'system', action: 'stop_all' },
       { command: 'pause all agents', agent: 'system', action: 'pause_all' },
@@ -350,7 +351,7 @@ export class VoiceOverrideService {
       { command: 'emergency sell all', agent: 'system', action: 'emergency_sell' },
       { command: 'emergency rebalance', agent: 'system', action: 'emergency_rebalance' }
     ];
-    
+
     for (const cmd of commands) {
       this.voiceCommands.set(cmd.command, cmd);
     }
@@ -362,7 +363,7 @@ export class VoiceOverrideService {
   startVoiceMonitoring() {
     // This would integrate with actual voice recognition
     // For now, it's a placeholder for the monitoring system
-    console.log('Voice monitoring started');
+    logger.info('Voice monitoring started');
   }
 
   /**
@@ -372,21 +373,21 @@ export class VoiceOverrideService {
    */
   determinePriority(parsedCommand) {
     const { command } = parsedCommand;
-    
+
     // Check for priority keywords
     for (const keyword of this.voiceConfig.priorityKeywords) {
       if (command.toLowerCase().includes(keyword)) {
         return 'high';
       }
     }
-    
+
     // Check for emergency keywords
     for (const keyword of this.voiceConfig.emergencyKeywords) {
       if (command.toLowerCase().includes(keyword)) {
         return 'emergency';
       }
     }
-    
+
     return 'normal';
   }
 
@@ -397,13 +398,13 @@ export class VoiceOverrideService {
    */
   isEmergencyCommand(parsedCommand) {
     const { command } = parsedCommand;
-    
+
     for (const keyword of this.voiceConfig.emergencyKeywords) {
       if (command.toLowerCase().includes(keyword)) {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -413,7 +414,7 @@ export class VoiceOverrideService {
    * @returns {Object} Agent instance
    */
   findAgent(agentName) {
-    return this.agents.find(agent => 
+    return this.agents.find(agent =>
       agent.constructor.name.toLowerCase().includes(agentName.toLowerCase())
     );
   }
@@ -432,9 +433,9 @@ export class VoiceOverrideService {
       success: executionResult.success,
       timestamp: new Date()
     };
-    
+
     this.learningData.push(learningData);
-    
+
     // Keep only last 1000 entries
     if (this.learningData.length > 1000) {
       this.learningData = this.learningData.slice(-1000);

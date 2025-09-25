@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: finnexus-postgres-pvc
+  namespace: finnexus-ai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: premium-ssd
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: finnexus-redis-pvc
+  namespace: finnexus-ai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: premium-ssd
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: finnexus-backup-pvc
+  namespace: finnexus-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: finnexus-logs-pvc
+  namespace: finnexus-monitoring
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: standard
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: finnexus-backup-job
+  namespace: finnexus-storage
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: postgres:15-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              pg_dump $DATABASE_URL > /backup/finnexus-backup-$(date +%Y%m%d-%H%M%S).sql
+              find /backup -name "*.sql" -mtime +7 -delete
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: finnexus-secrets
+                  key: database-url
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: finnexus-backup-pvc
+          restartPolicy: OnFailure

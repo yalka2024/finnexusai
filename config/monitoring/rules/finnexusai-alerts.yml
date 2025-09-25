@@ -1,0 +1,305 @@
+# FinNexusAI Alerting Rules
+# Comprehensive monitoring rules for production trading platform
+
+groups:
+  # System Health Rules
+  - name: system-health
+    rules:
+      # Service Down Alert
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute."
+          runbook_url: "https://docs.finnexusai.com/runbooks/service-down"
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) by (instance) / sum(node_memory_MemTotal_bytes) by (instance)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # Disk Space Low
+      - alert: DiskSpaceLow
+        expr: (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space low on {{ $labels.instance }}"
+          description: "Disk space usage is {{ $value }}% on {{ $labels.instance }}"
+
+  # Trading Engine Rules
+  - name: trading-engine
+    rules:
+      # Trading Engine Down
+      - alert: TradingEngineDown
+        expr: up{job="trading-engine"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: trading-engine
+        annotations:
+          summary: "Trading Engine is down"
+          description: "Trading Engine service is not responding"
+          runbook_url: "https://docs.finnexusai.com/runbooks/trading-engine-down"
+
+      # High Trading Latency
+      - alert: HighTradingLatency
+        expr: histogram_quantile(0.95, sum(rate(trading_order_latency_seconds_bucket[5m])) by (le)) > 1
+        for: 2m
+        labels:
+          severity: warning
+          service: trading-engine
+        annotations:
+          summary: "High trading latency detected"
+          description: "95th percentile trading latency is {{ $value }}s"
+
+      # Trading Volume Anomaly
+      - alert: TradingVolumeAnomaly
+        expr: abs(rate(trading_volume_total[5m]) - rate(trading_volume_total[1h] offset 5m)) / rate(trading_volume_total[1h] offset 5m) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: trading-engine
+        annotations:
+          summary: "Trading volume anomaly detected"
+          description: "Trading volume deviation is {{ $value }}%"
+
+  # HFT Engine Rules
+  - name: hft-engine
+    rules:
+      # HFT Engine Down
+      - alert: HFTEngineDown
+        expr: up{job="hft-engine"} == 0
+        for: 10s
+        labels:
+          severity: critical
+          service: hft-engine
+        annotations:
+          summary: "HFT Engine is down"
+          description: "HFT Engine service is not responding"
+          runbook_url: "https://docs.finnexusai.com/runbooks/hft-engine-down"
+
+      # HFT Latency Too High
+      - alert: HFTLatencyTooHigh
+        expr: histogram_quantile(0.99, sum(rate(hft_order_latency_seconds_bucket[1m])) by (le)) > 0.001
+        for: 30s
+        labels:
+          severity: critical
+          service: hft-engine
+        annotations:
+          summary: "HFT latency exceeds 1ms"
+          description: "99th percentile HFT latency is {{ $value }}s"
+
+      # HFT Order Rejection Rate
+      - alert: HFTHighRejectionRate
+        expr: rate(hft_orders_rejected_total[5m]) / rate(hft_orders_total[5m]) > 0.01
+        for: 1m
+        labels:
+          severity: warning
+          service: hft-engine
+        annotations:
+          summary: "High HFT order rejection rate"
+          description: "HFT order rejection rate is {{ $value }}%"
+
+  # Database Rules
+  - name: database
+    rules:
+      # PostgreSQL Down
+      - alert: PostgreSQLDown
+        expr: up{job="postgres-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database is not responding"
+          runbook_url: "https://docs.finnexusai.com/runbooks/postgresql-down"
+
+      # High Database Connections
+      - alert: HighDatabaseConnections
+        expr: pg_stat_database_numbackends / pg_stat_database_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: postgres
+        annotations:
+          summary: "High database connection usage"
+          description: "Database connections are at {{ $value }}% of maximum"
+
+      # Slow Database Queries
+      - alert: SlowDatabaseQueries
+        expr: rate(pg_stat_statements_mean_time_ms[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: postgres
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average query time is {{ $value }}ms"
+
+      # Database Lock Waits
+      - alert: DatabaseLockWaits
+        expr: rate(pg_stat_database_blk_read_time[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: postgres
+        annotations:
+          summary: "Database lock waits detected"
+          description: "Database lock wait time is {{ $value }}ms"
+
+  # Security Rules
+  - name: security
+    rules:
+      # High Failed Login Attempts
+      - alert: HighFailedLogins
+        expr: rate(auth_login_failures_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: security
+        annotations:
+          summary: "High failed login attempts"
+          description: "{{ $value }} failed login attempts per second"
+
+      # Suspicious API Usage
+      - alert: SuspiciousAPIUsage
+        expr: rate(http_requests_total{status="401"}[5m]) > 50
+        for: 2m
+        labels:
+          severity: security
+        annotations:
+          summary: "Suspicious API usage detected"
+          description: "{{ $value }} 401 errors per second"
+
+      # Rate Limit Exceeded
+      - alert: RateLimitExceeded
+        expr: rate(http_requests_total{status="429"}[5m]) > 100
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rate limit exceeded"
+          description: "{{ $value }} rate limit violations per second"
+
+  # Performance Rules
+  - name: performance
+    rules:
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) by (job) / sum(rate(http_requests_total[5m])) by (job) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate for {{ $labels.job }}"
+          description: "Error rate is {{ $value }}% for {{ $labels.job }}"
+
+      # High Response Time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time for {{ $labels.job }}"
+          description: "95th percentile response time is {{ $value }}s"
+
+      # Low Request Rate
+      - alert: LowRequestRate
+        expr: rate(http_requests_total[5m]) < 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low request rate for {{ $labels.job }}"
+          description: "Request rate is {{ $value }} req/sec"
+
+  # Arbitrage Rules
+  - name: arbitrage
+    rules:
+      # Arbitrage Engine Down
+      - alert: ArbitrageEngineDown
+        expr: up{job="arbitrage-engine"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: arbitrage-engine
+        annotations:
+          summary: "Arbitrage Engine is down"
+          description: "Arbitrage Engine service is not responding"
+
+      # No Arbitrage Opportunities
+      - alert: NoArbitrageOpportunities
+        expr: rate(arbitrage_opportunities_total[10m]) == 0
+        for: 15m
+        labels:
+          severity: warning
+          service: arbitrage-engine
+        annotations:
+          summary: "No arbitrage opportunities detected"
+          description: "No arbitrage opportunities found in the last 15 minutes"
+
+      # Arbitrage Execution Failures
+      - alert: ArbitrageExecutionFailures
+        expr: rate(arbitrage_executions_failed_total[5m]) / rate(arbitrage_executions_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: arbitrage-engine
+        annotations:
+          summary: "High arbitrage execution failure rate"
+          description: "Arbitrage execution failure rate is {{ $value }}%"
+
+  # Payment Processing Rules
+  - name: payment-processing
+    rules:
+      # Payment Processor Down
+      - alert: PaymentProcessorDown
+        expr: up{job="payment-services"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Payment processor is down"
+          description: "Payment processing service is not responding"
+
+      # High Payment Failure Rate
+      - alert: HighPaymentFailureRate
+        expr: rate(payment_failures_total[5m]) / rate(payment_attempts_total[5m]) > 0.02
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High payment failure rate"
+          description: "Payment failure rate is {{ $value }}%"
+
+      # Payment Processing Latency
+      - alert: PaymentProcessingLatency
+        expr: histogram_quantile(0.95, sum(rate(payment_processing_duration_seconds_bucket[5m])) by (le)) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High payment processing latency"
+          description: "95th percentile payment processing time is {{ $value }}s"
+

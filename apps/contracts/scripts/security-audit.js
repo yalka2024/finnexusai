@@ -302,7 +302,7 @@ async function main() {
     totalFailed += results.failed;
     
     if (results.issues.length > 0) {
-      console.log(`  🚨 Issues:`);
+      console.log('  🚨 Issues:');
       results.issues.forEach(issue => {
         console.log(`    - ${issue}`);
         if (issue.includes('CRITICAL')) criticalIssues++;

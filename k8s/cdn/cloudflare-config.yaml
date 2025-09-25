@@ -1,0 +1,391 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-cdn-config
+  namespace: finnexus-production
+data:
+  cloudflare-config.yaml: |
+    # CloudFlare CDN Configuration for FinAI Nexus
+    domains:
+      - api.finainexus.com
+      - app.finainexus.com
+      - cdn.finainexus.com
+    
+    # Cache Rules
+    cache_rules:
+      - url_pattern: "*.css"
+        cache_level: "cache_everything"
+        edge_ttl: 31536000  # 1 year
+        browser_ttl: 31536000
+      - url_pattern: "*.js"
+        cache_level: "cache_everything"
+        edge_ttl: 31536000  # 1 year
+        browser_ttl: 31536000
+      - url_pattern: "*.png"
+        cache_level: "cache_everything"
+        edge_ttl: 31536000  # 1 year
+        browser_ttl: 31536000
+      - url_pattern: "*.jpg"
+        cache_level: "cache_everything"
+        edge_ttl: 31536000  # 1 year
+        browser_ttl: 31536000
+      - url_pattern: "*.svg"
+        cache_level: "cache_everything"
+        edge_ttl: 31536000  # 1 year
+        browser_ttl: 31536000
+      - url_pattern: "/api/*"
+        cache_level: "bypass"
+        edge_ttl: 0
+        browser_ttl: 0
+    
+    # Security Settings
+    security:
+      ssl: "flexible"
+      always_use_https: true
+      min_tls_version: "1.2"
+      tls_1_3: "on"
+      automatic_https_rewrites: true
+      hsts_enabled: true
+      hsts_max_age: 31536000
+      hsts_include_subdomains: true
+      hsts_preload: true
+    
+    # Performance Settings
+    performance:
+      brotli: true
+      gzip: true
+      http2: true
+      http3: true
+      rocket_loader: true
+      mirage: true
+      polish: "lossless"
+      webp: true
+      minify:
+        css: true
+        html: true
+        js: true
+    
+    # DDoS Protection
+    ddos_protection:
+      level: "high"
+      challenge_passage: 30
+    
+    # Rate Limiting
+    rate_limiting:
+      - url_pattern: "/api/auth/login"
+        rate: "5/minute"
+        burst: 10
+        action: "block"
+      - url_pattern: "/api/auth/register"
+        rate: "3/minute"
+        burst: 5
+        action: "block"
+      - url_pattern: "/api/*"
+        rate: "100/minute"
+        burst: 200
+        action: "challenge"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finnexus-cdn-service
+  namespace: finnexus-production
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-timeout: "60"
+    # CloudFlare integration
+    cloudflare.com/zone-id: "${CLOUDFLARE_ZONE_ID}"
+    cloudflare.com/api-token: "${CLOUDFLARE_API_TOKEN}"
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 3000
+    protocol: TCP
+    name: https
+  selector:
+    app: finnexus-frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finnexus-api-cdn-service
+  namespace: finnexus-production
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-timeout: "60"
+    # CloudFlare integration
+    cloudflare.com/zone-id: "${CLOUDFLARE_ZONE_ID}"
+    cloudflare.com/api-token: "${CLOUDFLARE_API_TOKEN}"
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3001
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 3001
+    protocol: TCP
+    name: https
+  selector:
+    app: finnexus-backend
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-cdn-config
+  namespace: finnexus-production
+data:
+  nginx.conf: |
+    worker_processes auto;
+    
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        include       mime.types;
+        default_type  application/octet-stream;
+        
+        # Logging
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+        
+        access_log /var/log/nginx/access.log main;
+        error_log /var/log/nginx/error.log warn;
+        
+        # Basic Settings
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        
+        # Gzip Settings
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_buffers 16 8k;
+        gzip_http_version 1.1;
+        gzip_types
+            text/plain
+            text/css
+            text/xml
+            text/javascript
+            application/json
+            application/javascript
+            application/xml+rss
+            application/atom+xml
+            image/svg+xml;
+        
+        # Brotli Compression
+        brotli on;
+        brotli_comp_level 6;
+        brotli_types
+            text/plain
+            text/css
+            application/json
+            application/javascript
+            text/xml
+            application/xml
+            application/xml+rss
+            text/javascript;
+        
+        # Security Headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "no-referrer-when-downgrade" always;
+        add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+        
+        # Cache Settings
+        proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_cache:10m max_size=10g 
+                        inactive=60m use_temp_path=off;
+        
+        # Upstream for frontend
+        upstream frontend_service {
+            server finnexus-frontend-service:3000;
+            keepalive 32;
+        }
+        
+        # Upstream for backend
+        upstream backend_service {
+            server finnexus-backend-service:3001;
+            keepalive 32;
+        }
+        
+        # Frontend server
+        server {
+            listen 80;
+            server_name app.finainexus.com;
+            
+            # Redirect HTTP to HTTPS
+            return 301 https://$server_name$request_uri;
+        }
+        
+        server {
+            listen 443 ssl http2;
+            server_name app.finainexus.com;
+            
+            ssl_certificate /etc/nginx/ssl/app.finainexus.com.crt;
+            ssl_certificate_key /etc/nginx/ssl/app.finainexus.com.key;
+            
+            # SSL Settings
+            ssl_protocols TLSv1.2 TLSv1.3;
+            ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20;
+            ssl_prefer_server_ciphers off;
+            ssl_session_cache shared:SSL:10m;
+            ssl_session_timeout 10m;
+            
+            # Static file caching
+            location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+                add_header Vary "Accept-Encoding";
+                proxy_pass http://frontend_service;
+                proxy_cache my_cache;
+                proxy_cache_valid 200 1y;
+                proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+            }
+            
+            # API requests (no caching)
+            location /api/ {
+                proxy_pass http://backend_service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # No caching for API
+                add_header Cache-Control "no-cache, no-store, must-revalidate";
+                add_header Pragma "no-cache";
+                add_header Expires "0";
+            }
+            
+            # Main application
+            location / {
+                proxy_pass http://frontend_service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # Cache HTML for short time
+                proxy_cache my_cache;
+                proxy_cache_valid 200 5m;
+                proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+            }
+        }
+        
+        # API server
+        server {
+            listen 80;
+            server_name api.finainexus.com;
+            
+            # Redirect HTTP to HTTPS
+            return 301 https://$server_name$request_uri;
+        }
+        
+        server {
+            listen 443 ssl http2;
+            server_name api.finainexus.com;
+            
+            ssl_certificate /etc/nginx/ssl/api.finainexus.com.crt;
+            ssl_certificate_key /etc/nginx/ssl/api.finainexus.com.key;
+            
+            # SSL Settings
+            ssl_protocols TLSv1.2 TLSv1.3;
+            ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20;
+            ssl_prefer_server_ciphers off;
+            ssl_session_cache shared:SSL:10m;
+            ssl_session_timeout 10m;
+            
+            # API requests
+            location / {
+                proxy_pass http://backend_service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # No caching for API
+                add_header Cache-Control "no-cache, no-store, must-revalidate";
+                add_header Pragma "no-cache";
+                add_header Expires "0";
+            }
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-cdn
+  namespace: finnexus-production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-cdn
+  template:
+    metadata:
+      labels:
+        app: nginx-cdn
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: ssl-certs
+          mountPath: /etc/nginx/ssl
+        - name: cache-volume
+          mountPath: /var/cache/nginx
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-cdn-config
+      - name: ssl-certs
+        secret:
+          secretName: finnexus-tls-secret
+      - name: cache-volume
+        emptyDir: {}
+
+
+

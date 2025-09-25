@@ -1,0 +1,13 @@
+﻿apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: threat-alerts
+spec:
+  groups:
+  - name: finainexus.rules
+    rules:
+    - alert: HighThreats
+      expr: rate(threats_total[5m]) > 0.1
+      for: 1m
+      labels:
+        severity: critical
