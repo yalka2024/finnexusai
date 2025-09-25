@@ -1,125 +1,64 @@
-# Explicit permissions for CodeQL and security scanning
-permissions:
-  actions: read
-  contents: read
-  security-events: write
-name: CI
+name: FinNexusAI CI
+
 on:
   push:
-    branches: [main]
+    branches: [ "main" ]
   pull_request:
-    branches: [main]
+    branches: [ "main" ]
+
 jobs:
-  vuln-scan:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: windows-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Snyk scan (Node.js)
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Setup PowerShell logging module
+      - name: Setup Logging Module
+        shell: pwsh
         run: |
-          npm install -g snyk
-          snyk test || true
-      - name: Trivy scan (Docker)
+          Import-Module "$PWD\modules\logging\logging.psm1" -Force
+          Initialize-Log
+          Write-Log -Message "GitHub Actions workflow started" -Level INFO
+
+      # Run your main tasks with logging
+      - name: Run tasks.ps1
+        shell: pwsh
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-          trivy fs . || true
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Build docs
+          try {
+            Import-Module "$PWD\modules\logging\logging.psm1" -Force
+            Initialize-Log
+            Write-Log -Message "Executing tasks.ps1 in CI pipeline" -Level INFO
+            ./tasks.ps1
+          } catch {
+            Write-Log -Message "CI pipeline failed: $_" -Level ERROR
+            exit 1
+          }
+
+      # Tail last 50 log lines directly in Actions UI for debugging
+      - name: Tail last 50 log lines
+        if: always()
+        shell: pwsh
         run: |
-          cd docs
-          # Example: build static docs (replace with Docusaurus/MkDocs as needed)
-          echo "Docs build complete."
-      - name: Deploy docs to GitHub Pages
-        run: echo "Deploy docs to GitHub Pages (add your publish step here)"
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        module: [web, backend, mobile, ai]
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18.x'
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - name: Install dependencies
-        run: |
-          cd apps/${{ matrix.module }}
-          if [ "${{ matrix.module }}" = "ai" ]; then pip install -r requirements.txt || true; fi
-          if [ -f package.json ]; then npm install; fi
-      - name: Security audit (npm)
-        if: matrix.module != 'ai'
-        run: |
-          cd apps/${{ matrix.module }}
-          if [ -f package.json ]; then npm audit --audit-level=moderate || true; fi
-      - name: Security audit (pip)
-        if: matrix.module == 'ai'
-        run: |
-          cd apps/ai
-          pip install pip-audit || true
-          pip-audit || true
-      - name: Install dependencies
-        run: |
-          cd apps/${{ matrix.module }}
-          npm install || true
-      - name: Install Jest globally
-        if: matrix.module != 'ai'
-        run: npm install -g jest
-      - name: Run Jest tests
-        if: matrix.module != 'ai'
-        run: |
-          cd apps/${{ matrix.module }}
-          npx jest --config jest.config.js --coverage
-      - name: Run Python tests
-        if: matrix.module == 'ai'
-        run: |
-          cd apps/ai
-          pip install -r requirements.txt
-          pytest || python3 -m unittest discover
-      - name: Upload coverage reports
-        if: matrix.module != 'ai'
+          $logDir = "$env:USERPROFILE\FinAI_Logs"
+          if (Test-Path $logDir) {
+            $latest = Get-ChildItem -Path $logDir -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($latest) {
+              Write-Host "=== Showing last 50 lines of log: $($latest.Name) ==="
+              Get-Content -Path $latest.FullName -Tail 50
+            } else {
+              Write-Host "⚠️ No log files found."
+            }
+          } else {
+            Write-Host "⚠️ Log directory not found."
+          }
+
+      # Upload full logs as artifact (optional, for full audit trail)
+      - name: Upload Logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.module }}
-          path: apps/${{ matrix.module }}/coverage
-  codeql:
-    name: CodeQL Analysis
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
-        with:
-          languages: javascript, python
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v2
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
-  deploy:
-    needs: [test, docs, codeql]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Deploy web (Vercel)
-        if: success() && github.ref == 'refs/heads/main'
-        run: echo "Deploy web to Vercel (add your Vercel CLI and token here)"
-      - name: Deploy backend (Heroku)
-        if: success() && github.ref == 'refs/heads/main'
-        run: echo "Deploy backend to Heroku (add your Heroku CLI and token here)"
-      - name: Install Docker Compose
-        run: |
-          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-          docker-compose version
-      - name: Build and start all services with Docker Compose
-        run: |
-          docker-compose up --build -d
-      - name: Stop all services after build
-        run: |
-          docker-compose down
+          name: finai-logs
+          path: ${{ env.USERPROFILE }}\FinAI_Logs
